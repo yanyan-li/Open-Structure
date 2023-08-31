@@ -1,0 +1,7 @@
+The settings of the Venom Simulator system are saved in this file: 
+frame_num_:214
+traject_type_:1
+vert_lines_:30
+horiz_lines_:28
+vert_points_:521
+horiz_points_:0
