@@ -23,6 +23,7 @@ MESSAGE(${OpenCV_VERSION})
 
 option(VERBOSE "Venom Similator Printer" ON)
 option(DEBUG "Venom Similator Debug" ON)
+option(Examples_run "Complile Venom Simulator Examples" OFF)
 if(VERBOSE)
  message(STATUS "---Open Venom Simulator Printer---")
  add_definitions(-D__VERBOSE__)
@@ -65,6 +66,7 @@ add_executable(start_venom examples/main_entrance.cc)
 target_link_libraries(start_venom VenomLib ${CMAKE_THREAD_LIBS_INIT}) 
 
 
+if(Examples_run)
 add_executable(test_draw_corridor examples/test_draw_corridor.cc)
 target_link_libraries(test_draw_corridor VenomLib ${CMAKE_THREAD_LIBS_INIT}) 
 
@@ -85,4 +87,4 @@ target_link_libraries(test_draw_box_envpl VenomLib ${CMAKE_THREAD_LIBS_INIT})
 
 add_executable(test_draw_new_line examples/test_line_rect_intersection.cc)
 target_link_libraries(test_draw_new_line VenomLib ${CMAKE_THREAD_LIBS_INIT})
-
+endif()
