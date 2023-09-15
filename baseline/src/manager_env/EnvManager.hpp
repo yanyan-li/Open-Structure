@@ -19,6 +19,7 @@
 #include "src/utils/UtilStruct.hpp"
 #include <Eigen/StdVector>
 #include <Eigen/src/Core/Matrix.h>
+#include <omp.h>
 
 namespace simulator
 {
@@ -74,6 +75,7 @@ namespace simulator
         std::string traj_path;
         std::string envpoint_path_;
         std::string envline_path_;
+        std::string associate_path_;
         int traj_num;
         int envpoint_num;
         int envline_num;
@@ -102,6 +104,7 @@ namespace simulator
             settings["Env.Public.envtraj_path"] >> traj_path;
             settings["Env.Public.envpoint_path"] >> envpoint_path_;
             settings["Env.Public.envline_path"] >> envline_path_;
+            // settings["Env.Public.envline_path"] >> associate_path_;
 
             // set cameras
             ptr_robot_trajectory_ = new simulator::Trajectory(traject_type, frame_num, settings);
@@ -776,6 +779,14 @@ namespace simulator
                 v_points_.push_back(ptr_ep->pos_world_);
                 vec_epid_pos_w_.push_back(std::make_pair(ptr_ep->num_id_, ptr_ep->pos_world_)); // after checking
             }
+        }
+
+        void BuildPublicPointAssociations()
+        {
+            // std::map<int /*envpoint_id*/, int /*frame_id*/> asso_epid_frameid;
+            std::vector<std::pair<int, int>> asso_epid_frameid;
+            IO::ReadPublicAssociation(associate_path_, asso_epid_frameid);
+            //  std::map<int /*envpoint_id*/, frame_point_meas /*uvd*/> asso_epid_frameid_pixeld_;
         }
 
         void GetBoundsOfPlane(std::vector<Eigen::Vector3d> &vertices, Eigen::Vector3d &max_bounds, Eigen::Vector3d &min_bounds)

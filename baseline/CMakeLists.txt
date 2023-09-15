@@ -49,7 +49,7 @@ INCLUDE_DIRECTORIES(
 )
 add_subdirectory(thirdparty)
 
-file(GLOB SOURCEFILES ${PROJECT_SOURCE_DIR}/src/*/*.hpp ${PROJECT_SOURCE_DIR}/src/*/*/*.cc)
+file(GLOB SOURCEFILES ${PROJECT_SOURCE_DIR}/src/*/*.hpp ${PROJECT_SOURCE_DIR}/src/*/*.cc ${PROJECT_SOURCE_DIR}/src/*/*/*.cc)
 #file(GLOB SOURCEFILES src/*.hpp)
 
 add_library(VenomLib SHARED ${SOURCEFILES})
@@ -60,10 +60,10 @@ target_link_libraries(VenomLib
         ${CERES_LIBRARIES})
         #gtsam)
 
-
 #########---simulation interface---###################
 add_executable(start_venom examples/main_entrance.cc)
 target_link_libraries(start_venom VenomLib ${CMAKE_THREAD_LIBS_INIT}) 
+
 
 add_executable(test_draw_corridor examples/test_draw_corridor.cc)
 target_link_libraries(test_draw_corridor VenomLib ${CMAKE_THREAD_LIBS_INIT}) 
@@ -82,7 +82,6 @@ target_link_libraries(test_draw_room_envpl VenomLib ${CMAKE_THREAD_LIBS_INIT})
 
 add_executable(test_draw_box_envpl examples/test_draw_objects_envpointline.cc)
 target_link_libraries(test_draw_box_envpl VenomLib ${CMAKE_THREAD_LIBS_INIT})
-
 
 add_executable(test_draw_new_line examples/test_line_rect_intersection.cc)
 target_link_libraries(test_draw_new_line VenomLib ${CMAKE_THREAD_LIBS_INIT})

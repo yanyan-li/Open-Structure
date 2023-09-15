@@ -16,6 +16,7 @@
 #include "src/optimizer/parametrization/pose_local_parameterization.hpp"
 #include "src/utils/UtilTransformer.hpp"
 #include "src/optimizer/factor/LineProjectionFactor.hpp"
+#include <mutex>
 
 namespace simulator
 {
@@ -24,7 +25,7 @@ namespace simulator
         class CovisPointBA
         {
             public:
-
+            static std::mutex mMutexopti_para;
             static void optimizer(
                 simulator::Trajectory *ptr_robot_trajectory,
                 simulator::OptimizationManager &opti_para,
@@ -40,16 +41,23 @@ namespace simulator
                 const float pixel_sigma = 1.5;
                
                 // intrinsic
+
                 double fx; double fy; double cx; double cy;
                 fx = ptr_robot_trajectory->cam_intri.fx;
                 fy = ptr_robot_trajectory->cam_intri.fy;
                 cx = ptr_robot_trajectory->cam_intri.cx;
                 cy = ptr_robot_trajectory->cam_intri.cy;
+
+                std::cout << "fx = " << fx << std::endl;
              
                 // construct ceres optim parameters
+
                 ceres::Problem problem;
+
                 ceres::LossFunction *loss_function;
+
                 ceres::ParameterBlockOrdering *ordering = new ceres::ParameterBlockOrdering();
+
                 loss_function = new ceres::CauchyLoss(1.0);
 
                 std::cout << "loss_function: " << opti_para.mappoints.size() << std::endl;
@@ -160,6 +168,7 @@ namespace simulator
                     std::cout << "original: " << mp->second(0) << "," << mp->second(1) << "," << mp->second(2) << std::endl;
                     std::cout << "optimized: " << optimized_mappoint(0) << "," << optimized_mappoint(1) << "," << optimized_mappoint(2) << std::endl;
                 }
+
                 return;
             }
         };

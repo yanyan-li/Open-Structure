@@ -1,10 +1,10 @@
 /*
  * @Author: yanyan-li yanyan.li.camp@gmail.com
  * @Date: 2022-10-06 02:40:42
- * @LastEditTime: 2023-07-28 23:35:18
+ * @LastEditTime: 2023-09-14 16:51:31
  * @LastEditors: yanyan-li yanyan.li.camp@gmail.com
- * @Description: 
- * @FilePath: /1. RA-L2023/examples/main_entrance.cc
+ * @Description:
+ * @FilePath: /Open-Structure/baseline/examples/main_entrance.cc
  */
 #include <iostream>
 #include <string>
@@ -25,7 +25,7 @@ int main(int argc, char **argv)
 
     
     // interface
-    simulator::Interface venom_entrance("version 1");
+    simulator::Interface venom_entrance("version 2.0.0");
     venom_entrance.StartVenom(argv[1]);
 
     //

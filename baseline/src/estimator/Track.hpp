@@ -10,12 +10,13 @@
 #ifndef __VENOM_SRC_TRACK_HPP__
 #define __VENOM_SRC_TRACK_HPP__
 
+#include <Eigen/StdVector>
 #include <algorithm>
+#include <eigen3/Eigen/Dense>
 #include <iostream>
 #include <opencv2/core/core.hpp>
 #include <opencv2/core/eigen.hpp>
 #include <opencv2/opencv.hpp>
-#include <Eigen/StdVector>
 
 #include "src/manager_env/EnvTrajectory.hpp"
 #include "src/utils/UtilStruct.hpp"
@@ -58,8 +59,15 @@ namespace simulator
         
         std::vector<std::pair<int/*mappoint_id*/, Vec3>> vec_mpid_xyz_;
         std::vector<std::pair<int/*mappoint_id*/, std::vector<int/*frame_id*/>>> vec_mpid_frameid_;
+        std::mutex mMutexSpeed;
+        int mTrackSpeed;
+        bool mbTrackOdometry;
 
-    public:        
+    public:
+        void a(bool b, int c)
+        {
+            int i = 0;
+        }
         /**
          * @brief 
          * 
@@ -124,6 +132,8 @@ namespace simulator
                 int mapline_id = mit->first;
                 local_maplines_[mapline_id] = Mat32::Zero();
             }
+            mbTrackOdometry = false;
+            mTrackSpeed = 1;
         }
         
         void SetMapLandmarks(std::vector<std::pair<int, Vec3>> &vec_epid_pos_w)
@@ -164,7 +174,7 @@ namespace simulator
          * @brief pose estimation based on traditional methods
          * 
          */
-        void TrackOdometry(std::string &root_path, bool with_localmap, bool with_lines)
+        void TrackOdometry(std::string root_path, bool with_localmap, bool with_lines)
         {
             std::vector<std::pair<int/*frame_id*/,  Eigen::Matrix4d/*frame_pose*/>> vec_vo_estimated_Twc;
             //std::vector<std::pair<int/*frame_id*/,  Eigen::Matrix4d/*frame_pose*/>> vec_localmap_Twc;
@@ -341,9 +351,11 @@ namespace simulator
                           << pose_curr_in_map << std::endl;
 #endif
             }
-                SaveFramePredictedTrajectoryLovelyTUM(root_path+"estimated_vo.txt", vec_vo_Twc_);
-                SaveFramePredictedTrajectoryLovelyTUM(root_path+"ground_pose.txt", vec_gt_Twc);
-                SaveFramePredictedTrajectoryLovelyTUM(root_path+"estimated_localmap.txt", vec_localmap_Twc_);
+            mbTrackOdometry = true;
+            cv::destroyAllWindows();
+            SaveFramePredictedTrajectoryLovelyTUM(root_path + "estimated_vo.txt", vec_vo_Twc_);
+            SaveFramePredictedTrajectoryLovelyTUM(root_path + "ground_pose.txt", vec_gt_Twc);
+            SaveFramePredictedTrajectoryLovelyTUM(root_path + "estimated_localmap.txt", vec_localmap_Twc_);
         }
     
 
@@ -860,10 +872,11 @@ namespace simulator
                 cv::line(img, cv::Point(s_pixel_curr(0), s_pixel_curr(1)), cv::Point(e_pixel_curr(0), e_pixel_curr(1)), cv::Scalar(0, 0, 255), 2);
                 cv::putText(img, std::to_string(ml_id), cv::Point(s_pixel_curr(0), s_pixel_curr(1)), font_face, font_scale, cv::Scalar(0, 0, 255), thickness, 8, 0);
             }
-
+            cv::namedWindow("2D Viewer", cv::WINDOW_NORMAL);
             cv::imshow("2D Viewer", img);
-            if (cv::waitKey() == 27)
-                cv::imwrite(std::to_string(frame_idx) + ".png", img);
+            cv::waitKey(int(50 / mTrackSpeed));
+            // if (cv::waitKey() == 27)
+            //     cv::imwrite(std::to_string(frame_idx) + ".png", img);
         }
 
         void DrawFeatures(std::map<int, std::pair<Vec3, Eigen::Vector2d>> &vec_data_pnp,
