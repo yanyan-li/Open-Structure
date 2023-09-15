@@ -918,9 +918,9 @@ namespace simulator
                            cv::Scalar(125, 125, 125));
                 cv::putText(img, std::to_string(mp_id), cv::Point(pixel(0), pixel(1)), font_face, font_scale, cv::Scalar(125, 125, 125), thickness, 8, 0);
             }
-            cv::imshow("2D Viewer", img);
-            if (cv::waitKey() == 27)
-                cv::imwrite(std::to_string(frame_idx) + ".png", img);
+            // cv::imshow("2D Viewer", img);
+            // if (cv::waitKey() == 27)
+            //     cv::imwrite(std::to_string(frame_idx) + ".png", img);
         }
     };
 }

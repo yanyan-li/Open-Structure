@@ -267,6 +267,26 @@ namespace simulator
      * @param filename 
      * @param pts 
      */
+    void ReadPublicPointClouds(const std::string &filename, std::vector<std::pair<int, Eigen::Vector3d>> &pts)
+    {
+      std::ifstream file(filename);
+      std::string line;
+      while (std::getline(file, line))
+      {
+        std::vector<std::string> words;
+        boost::split(words, line, boost::is_any_of(" "), boost::token_compress_on);
+        // std::cout<<words[0]<<std::endl;
+        Eigen::Vector3d pt = Eigen::Vector3d::Zero();
+        int mp_id = boost::lexical_cast<int>(words[0]);
+
+        pt.x() = boost::lexical_cast<double>(words[1]);
+        pt.y() = boost::lexical_cast<double>(words[2]);
+        pt.z() = boost::lexical_cast<double>(words[3]);
+        pts.push_back(std::make_pair(mp_id, pt));
+      }
+      file.close();
+    }
+
     void ReadPublicPointClouds(const std::string &filename, std::vector<Eigen::Vector3d> &pts)
     {
       std::ifstream file(filename);
@@ -277,6 +297,7 @@ namespace simulator
         boost::split(words, line, boost::is_any_of(" "), boost::token_compress_on);
         //std::cout<<words[0]<<std::endl;
         Eigen::Vector3d pt = Eigen::Vector3d::Zero();
+
         pt.x() = boost::lexical_cast<double>(words[0]);
         pt.y() = boost::lexical_cast<double>(words[1]);
         pt.z() = boost::lexical_cast<double>(words[2]);
@@ -313,8 +334,8 @@ namespace simulator
       file.close();
     }
 
-    void ReadPublicAssociation(const std::string &filename,
-                               std::vector<std::pair<int, int>> &asso_ptid_frame_id)
+    void ReadPublicPointAssociation(const std::string &filename,
+                                    std::vector<std::pair<int, int>> &asso_ptid_frame_id)
     {
       std::ifstream file(filename);
       std::string line;
@@ -324,12 +345,14 @@ namespace simulator
         boost::split(words, line, boost::is_any_of(" "), boost::token_compress_on);
         // std::cout<<words[0]<<std::endl;
         std::map<int, int> asso_i;
-        int point_id = boost::lexical_cast<double>(words[0]);
-        int frame_id = boost::lexical_cast<double>(words[1]);
-        double u = boost::lexical_cast<double>(words[2]);
-        double v = boost::lexical_cast<double>(words[3]);
-
-        asso_ptid_frame_id.push_back(std::make_pair(point_id, frame_id));
+        if (words[0].compare("MaplineFrameAsso:") == 0)
+        {
+          int point_id = boost::lexical_cast<double>(words[1]);
+          int frame_id = boost::lexical_cast<double>(words[2]);
+          double u = boost::lexical_cast<double>(words[3]);
+          double v = boost::lexical_cast<double>(words[4]);
+          asso_ptid_frame_id.push_back(std::make_pair(point_id, frame_id));
+        }
       }
       file.close();
     }

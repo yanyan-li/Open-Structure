@@ -209,6 +209,7 @@ namespace simulator
             bool click_start_optimize = true;
             
             bool click_show_connection = true;
+            bool bHaveTwcs_true = false;
 
             std::map<int, Mat4> Twcs_factorgraph;
             std::vector<Mat4> Twcs_posegraph;
@@ -441,7 +442,7 @@ namespace simulator
                 if (menuShowTrajectory)
                 {
                     std::vector<pangolin::OpenGlMatrix> MsTrue;
-                    if (!click_input_factor_graph)
+                    if (!click_input_factor_graph && !bHaveTwcs_true)
                     {
                         for (auto &mit : venom_factorgraph.kfs)
                             Twcs_true_.push_back(mit.second);
@@ -612,7 +613,7 @@ namespace simulator
                     else if (traject_type == 8)
                         set_traject_type = "           TUM Dataset            ";
                     else if (traject_type == 9)
-                        set_traject_type = "         OpenStructure_based Euroc Dataset           ";
+                        set_traject_type = "         OpenStructure Dataset           ";
 
                     // get size parameters of the env
                     if(click_read_public)  // set parameters of public datasets
