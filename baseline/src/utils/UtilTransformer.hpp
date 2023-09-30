@@ -92,8 +92,8 @@ class UtiliLine {
     Vector3d u3 = u1.cross(u2);
     //
     double sy = sqrt(u1(0)*u1(0)+u1(1)*u1(1));
-    //float sy = sqrt(R.at<double>(0,0) * R.at<double>(0,0) +  R.at<double>(1,0) * R.at<double>(1,0) );
-    std::cout << "From rotation mat to eular: sy:" << sy << ", n.norm():" << n.norm() << std::endl;
+    // float sy = sqrt(R.at<double>(0,0) * R.at<double>(0,0) +  R.at<double>(1,0) * R.at<double>(1,0) );
+    //  std::cout << "From rotation mat to eular: sy:" << sy << ", n.norm():" << n.norm() << std::endl;
     assert(sy > 1e-6);
     // todo:: use SO3
 

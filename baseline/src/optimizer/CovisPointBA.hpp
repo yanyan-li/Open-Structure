@@ -16,7 +16,6 @@
 #include "src/optimizer/parametrization/pose_local_parameterization.hpp"
 #include "src/utils/UtilTransformer.hpp"
 #include "src/optimizer/factor/LineProjectionFactor.hpp"
-#include <mutex>
 
 namespace simulator
 {
@@ -25,7 +24,7 @@ namespace simulator
         class CovisPointBA
         {
             public:
-            static std::mutex mMutexopti_para;
+
             static void optimizer(
                 simulator::Trajectory *ptr_robot_trajectory,
                 simulator::OptimizationManager &opti_para,
@@ -41,33 +40,26 @@ namespace simulator
                 const float pixel_sigma = 1.5;
                
                 // intrinsic
-
                 double fx; double fy; double cx; double cy;
                 fx = ptr_robot_trajectory->cam_intri.fx;
                 fy = ptr_robot_trajectory->cam_intri.fy;
                 cx = ptr_robot_trajectory->cam_intri.cx;
                 cy = ptr_robot_trajectory->cam_intri.cy;
-
-                std::cout << "fx = " << fx << std::endl;
              
                 // construct ceres optim parameters
-
                 ceres::Problem problem;
-
                 ceres::LossFunction *loss_function;
-
                 ceres::ParameterBlockOrdering *ordering = new ceres::ParameterBlockOrdering();
-
                 loss_function = new ceres::CauchyLoss(1.0);
 
-                std::cout << "loss_function: " << opti_para.mappoints.size() << std::endl;
+                // std::cout << "loss_function: " << opti_para.mappoints.size() << std::endl;
                 // add mappoints
                 double Para_Point_Feature[opti_para.mappoints.size()][3];
                 for(auto mp = opti_para.mappoints.begin(); mp!= opti_para.mappoints.end(); mp++)
                 {
                     int mp_id = mp->first;
-                    if (mp_id > opti_para.mappoints.size())
-                        std::cout << "mp_id:" << mp_id << "," << opti_para.mappoints.size() << std::endl;
+                    // if (mp_id > opti_para.mappoints.size())
+                    //     std::cout << "mp_id:" << mp_id << "," << opti_para.mappoints.size() << std::endl;
                     if (opti_para.mappoints[mp_id] == Vec3::Zero())
                         continue;
                     Para_Point_Feature[mp_id][0] = mp->second(0);
@@ -78,7 +70,7 @@ namespace simulator
                     // ordering 
                 }
 
-                std::cout << "points: " << opti_para.mappoints.size() << std::endl;
+                // std::cout << "points: " << opti_para.mappoints.size() << std::endl;
 
                 // add camera pose
                 double Para_Pose[opti_para.kfs.size()][7];
@@ -104,7 +96,7 @@ namespace simulator
                         problem.SetParameterBlockConstant(Para_Pose[kf_id]);
                 }
 
-                std::cout << "poses: " << opti_para.kfs.size() << std::endl;
+                // std::cout << "poses: " << opti_para.kfs.size() << std::endl;
 
                 // construct ceres problem
                 for(auto asso_mp_mea = opti_para.asso_mp_meas.begin(); asso_mp_mea !=  opti_para.asso_mp_meas.end(); asso_mp_mea++)
@@ -127,11 +119,12 @@ namespace simulator
                     }
                 }
 
-                std::cout << "mea: " << opti_para.asso_mp_meas.size() << std::endl;
+                // std::cout << "mea: " << opti_para.asso_mp_meas.size() << std::endl;
 
                 // slove ceres problem
                 ceres::Solver::Options options;
                 options.minimizer_progress_to_stdout = true;
+                options.max_num_iterations = 5;
                 options.linear_solver_type = ceres::DENSE_SCHUR;
                 ceres::Solver::Summary summary;
                 ceres::Solve (options, &problem, & summary);
@@ -148,8 +141,8 @@ namespace simulator
                     Eigen::Matrix4d Twc = Eigen::Matrix4d::Identity();
                     Twc.block(0,0,3,3) = Rot;
                     Twc.block(0,3,3,1) = Tran;
-                    std::cout << "pose: " << kf->second << std::endl
-                              << Twc << std::endl;
+                    // std::cout << "pose: " << kf->second << std::endl
+                    //           << Twc << std::endl;
                     // kfs[kf_id] = Twc;
                     optimized_poses[kf_id]=Twc;
                 }
@@ -165,10 +158,9 @@ namespace simulator
                         Para_Point_Feature[mp_id][1],                   //= mp->second(1);
                         Para_Point_Feature[mp_id][2];                   //= mp->second(2);
                     optimized_mappoints[mp_id] = optimized_mappoint;
-                    std::cout << "original: " << mp->second(0) << "," << mp->second(1) << "," << mp->second(2) << std::endl;
-                    std::cout << "optimized: " << optimized_mappoint(0) << "," << optimized_mappoint(1) << "," << optimized_mappoint(2) << std::endl;
+                    // std::cout << "original: " << mp->second(0) << "," << mp->second(1) << "," << mp->second(2) << std::endl;
+                    // std::cout << "optimized: " << optimized_mappoint(0) << "," << optimized_mappoint(1) << "," << optimized_mappoint(2) << std::endl;
                 }
-
                 return;
             }
         };

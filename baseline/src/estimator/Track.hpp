@@ -198,7 +198,7 @@ namespace simulator
                     prev_pose_in_world = frame.second; // robot_traject_->vec_traject_gt_Twc_[frame_id];
                     curr_gt_pose_in_world = frame.second; // robot_traject_->vec_traject_gt_Twc_[frame_id];
                     pose_curr_in_map = frame.second; // robot_traject_->vec_traject_gt_Twc_[frame_id];
-                    
+
                     for(auto frame_info:obs_point_)
                     {
                         int frame_idx = frame_info.first;
@@ -213,7 +213,7 @@ namespace simulator
                                                         prev_pose_in_world.block(0, 3, 3, 1); // 这里有问题，应该是世界坐标系
                             
                             local_mappoints_[point_id] = point_in_w;
-#ifdef __DEBUG__OFF 
+#ifdef __DEBUG__OFF
                             for(auto epid_pos: vec_epid_pos_w_)
                                 if(epid_pos.first == point_id)
                                     std::cout<<"point distance:"<<(epid_pos.second-point_in_w).norm()<<std::endl;
@@ -234,7 +234,6 @@ namespace simulator
                     //                                  prev_pose_in_world.block(0, 3, 3, 1); // 这里有问题，应该是世界坐标系
                     //     local_mappoints_[point_id] = point_in_w;
                     // }
-
                     for (auto frame_info : obs_line_)
                     {
                         int frame_idx = frame_info.first;
@@ -273,37 +272,37 @@ namespace simulator
                 {
                     DrawMeasurements(obs_point_[frame_id], obs_line_[frame_id], frame_id);
                     // relative pose  T_{prev, curr}
-                    pose_curr_in_prev = RelativePoseEstimation(prev_pose_in_world, 
+                    pose_curr_in_prev = RelativePoseEstimation(prev_pose_in_world,
                                                                obs_point_[frame_id - 1],
                                                                obs_line_[frame_id - 1],
                                                                obs_point_[frame_id],
-                                                               obs_line_[frame_id]); 
-                    
-                    if(with_localmap)
+                                                               obs_line_[frame_id]);
+
+                    if (with_localmap)
                     {
                         pose_curr_in_map = LocalMapPoseEstimation(vec_epid_pos_w_,
                                                                   obs_point_[frame_id],
                                                                   frame.second,
                                                                   frame_id); //
                                                                              // robot_traject_->vec_traject_gt_Twc_[frame_id]);
-                        if(pose_curr_in_map.isIdentity())
+                        if (pose_curr_in_map.isIdentity())
                         {
-                            std::cout<<"problems in localmap_pose"<<std::endl;
-                            std::cout<<"\033[0;31mThis is the "<<frame_id<<"th frame.\033[0m"<<std::endl;
-                            std::cout<<"obs_point_[frame_id]:"<<obs_point_[frame_id].size()<<std::endl;
+                            std::cout << "problems in localmap_pose" << std::endl;
+                            std::cout << "\033[0;31mThis is the " << frame_id << "th frame.\033[0m" << std::endl;
+                            std::cout << "obs_point_[frame_id]:" << obs_point_[frame_id].size() << std::endl;
 
-                            for(int i =0; i<obs_point_[frame_id].size();i++)
-                                std::cout<<obs_point_[frame_id].size()<<","
-                                         <<obs_point_[frame_id][i].first<<","
-                                         <<obs_point_[frame_id][i].second(0)<<","
-                                         <<obs_point_[frame_id][i].second(1)<<","
-                                         <<obs_point_[frame_id][i].second(2)<<std::endl;
+                            for (int i = 0; i < obs_point_[frame_id].size(); i++)
+                                std::cout << obs_point_[frame_id].size() << ","
+                                          << obs_point_[frame_id][i].first << ","
+                                          << obs_point_[frame_id][i].second(0) << ","
+                                          << obs_point_[frame_id][i].second(1) << ","
+                                          << obs_point_[frame_id][i].second(2) << std::endl;
                             // init local_mappoints
                             //  return;
-                            pose_curr_in_map  = prev_pose_in_world;  
-                        }                     
+                            pose_curr_in_map = prev_pose_in_world;
+                        }
                     }
-                        
+
                     if (!with_lines)
                     {
                         if (with_localmap)
@@ -311,33 +310,33 @@ namespace simulator
                         else
                             FuseMapPoint(local_mappoints_, pose_curr_in_prev, obs_point_[frame_id]);
                     }
-                    else if(with_lines)
+                    else if (with_lines)
                     {
-                        if(with_localmap)
+                        if (with_localmap)
                         {
                             FuseMapPoint(local_mappoints_, pose_curr_in_map, obs_point_[frame_id]);
                             FuseMapLine(local_maplines_, pose_curr_in_map, obs_line_[frame_id]);
                         }
                         else
                         {
+
                             FuseMapPoint(local_mappoints_, pose_curr_in_prev, obs_point_[frame_id]);
                             FuseMapLine(local_maplines_, pose_curr_in_prev, obs_line_[frame_id]);
                         }
-
                     }
 
                     // relative gt pose: T_{curr, prev} = T_{w, curr}.inverse() * T_{w, prev}
                     // pose_gt_curr_in_prev = robot_traject_->vec_traject_gt_Twc_[frame_id].inverse() * robot_traject_->vec_traject_gt_Twc_[frame_id - 1];
                     // curr_gt_pose_in_world = robot_traject_->vec_traject_gt_Twc_[frame_id];
-                    prev_pose_in_world = pose_curr_in_map; 
+                    prev_pose_in_world = pose_curr_in_map;
                     pose_gt_curr_in_prev = frame.second.inverse() * robot_traject_->groundtruth_traject_id_Twc_[frame_id - 1];
                     curr_gt_pose_in_world = frame.second;
-                    prev_pose_in_world = pose_curr_in_map; 
+                    prev_pose_in_world = pose_curr_in_map;
                 }
 
                 vec_vo_Twc_.push_back(std::make_pair(frame_id, prev_pose_in_world));
-                vec_gt_Twc.push_back(std::make_pair(frame_id, curr_gt_pose_in_world ));
-                vec_localmap_Twc_.push_back(std::make_pair(frame_id, pose_curr_in_map ));
+                vec_gt_Twc.push_back(std::make_pair(frame_id, curr_gt_pose_in_world));
+                vec_localmap_Twc_.push_back(std::make_pair(frame_id, pose_curr_in_map));
 #ifdef __VERBOSE__NOT
                 std::cout << "ground truth pose:" << std::endl
                           << curr_gt_pose_in_world << std::endl;
@@ -357,25 +356,24 @@ namespace simulator
             SaveFramePredictedTrajectoryLovelyTUM(root_path + "ground_pose.txt", vec_gt_Twc);
             SaveFramePredictedTrajectoryLovelyTUM(root_path + "estimated_localmap.txt", vec_localmap_Twc_);
         }
-    
 
-        Eigen::Matrix4d LocalMapPoseEstimation(std::vector<std::pair<int/*point_id*/, Vec3>> &vec_epid_pos_w,
-                                               std::vector<std::pair<int/*point_id*/, Vec3>> &points_curr,
+        Eigen::Matrix4d LocalMapPoseEstimation(std::vector<std::pair<int /*point_id*/, Vec3>> &vec_epid_pos_w,
+                                               std::vector<std::pair<int /*point_id*/, Vec3>> &points_curr,
                                                Eigen::Matrix4d &gt_pose,
                                                const int frame_id)
         {
             // PnP
             std::map<int, std::pair<Vec3, Eigen::Vector2d>> vec_data_pnp;
             vec_data_pnp.clear();
-            // GetMapLandmarks 
-            for(size_t i = 0; i<vec_epid_pos_w.size(); i++)
+            // GetMapLandmarks
+            for (size_t i = 0; i < vec_epid_pos_w.size(); i++)
             {
                 // id
-                int prev_point_id = vec_epid_pos_w[i].first; 
+                int prev_point_id = vec_epid_pos_w[i].first;
                 // 3D env point
-                Vec3 point_in_map = vec_epid_pos_w[i].second; 
-                
-                int count =0;
+                Vec3 point_in_map = vec_epid_pos_w[i].second;
+
+                int count = 0;
                 for (size_t j = 0; j < points_curr.size(); j++)
                 {
                     // id
@@ -387,7 +385,7 @@ namespace simulator
                         // std::cout<< i<<","<< points_curr.size()<<","<<vec_data_pnp.size()<<","<<count<<",prev_point_id:"<<prev_point_id<<","<<curr_point_id<<std::endl;
                         // 2D pixel of the curr_frame
                         Vec3 point_in_curr = points_curr[j].second;
-                        assert(point_in_curr.z()>0.01);
+                        assert(point_in_curr.z() > 0.01);
                         Eigen::Vector2d pixel_curr;
                         GetPixelPosition(point_in_curr, pixel_curr);
                         vec_data_pnp[curr_point_id] = std::make_pair(point_in_map, pixel_curr);
@@ -397,13 +395,13 @@ namespace simulator
             }
 
             // pnp for pose estimation
-            if(vec_data_pnp.size()<6)
+            if (vec_data_pnp.size() < 6)
             {
-                std::cout<<"not enough for pnp"<<std::endl;
+                std::cout << "not enough for pnp" << std::endl;
                 return Eigen::Matrix4d::Identity();
             }
             Eigen::Matrix4d pose = PnPComputation(vec_data_pnp);
-          
+
             // if((gt_pose.block(0,3,3,1) -  pose.block(0,3,3,1)).norm()>1 )
             // {
             //     std::cout<<"traj size:"<<vec_data_pnp.size()<<std::endl;
@@ -418,16 +416,16 @@ namespace simulator
                                                Eigen::Matrix4d &gt_pose,
                                                const int frame_id)
         {
-            std::cout<<">>>> tracking based on the map-to-frame strategy. "<<std::endl;
+            std::cout << ">>>> tracking based on the map-to-frame strategy. " << std::endl;
             // PnP
             std::map<int, std::pair<Vec3, Eigen::Vector2d>> vec_data_pnp;
             vec_data_pnp.clear();
-            // GetMapLandmarks 
-            for(auto epit = epid_pos_localmap.begin(); epit!= epid_pos_localmap.end(); epit++)
+            // GetMapLandmarks
+            for (auto epit = epid_pos_localmap.begin(); epit != epid_pos_localmap.end(); epit++)
             {
                 int prev_point_id = epit->first;
-                Vec3 point_in_map = epit->second; 
-                if(point_in_map.isZero())
+                Vec3 point_in_map = epit->second;
+                if (point_in_map.isZero())
                     continue;
                 for (size_t j = 0; j < points_curr.size(); j++)
                 {
@@ -445,37 +443,37 @@ namespace simulator
                         Eigen::Vector2d pixel_curr;
                         GetPixelPosition(point_in_curr, pixel_curr);
 
-                        vec_data_pnp[prev_point_id]=std::make_pair(point_in_map, pixel_curr);
+                        vec_data_pnp[prev_point_id] = std::make_pair(point_in_map, pixel_curr);
                     }
                 }
             }
 
-            if(vec_data_pnp.size()<6)
+            if (vec_data_pnp.size() < 6)
             {
-                std::cout<<"not enough for pnp"<<std::endl;
+                std::cout << "not enough for pnp" << std::endl;
                 return Eigen::Matrix4d::Identity();
             }
-            
+
             Eigen::Matrix4d pose = PnPComputation(vec_data_pnp);
 
             return pose;
         }
 
         /**
-         * @brief 
-         * 
-         * @param pose_prev_in_w 
-         * @param points_prev 
-         * @param lines_prev 
-         * @param points_curr 
-         * @param lines_curr 
-         * @return Eigen::Matrix4d 
+         * @brief
+         *
+         * @param pose_prev_in_w
+         * @param points_prev
+         * @param lines_prev
+         * @param points_curr
+         * @param lines_curr
+         * @return Eigen::Matrix4d
          */
-        Eigen::Matrix4d RelativePoseEstimation(Eigen::Matrix4d &pose_prev_in_w, 
-                                                std::vector<std::pair<int /*point_id*/, Vec3>> &points_prev,
-                                                std::vector<std::pair<int /*line_id*/, Mat32>> &lines_prev,
-                                                std::vector<std::pair<int /*point_id*/, Vec3>> &points_curr,
-                                                std::vector<std::pair<int /*line_id*/, Mat32>> &lines_curr)
+        Eigen::Matrix4d RelativePoseEstimation(Eigen::Matrix4d &pose_prev_in_w,
+                                               std::vector<std::pair<int /*point_id*/, Vec3>> &points_prev,
+                                               std::vector<std::pair<int /*line_id*/, Mat32>> &lines_prev,
+                                               std::vector<std::pair<int /*point_id*/, Vec3>> &points_curr,
+                                               std::vector<std::pair<int /*line_id*/, Mat32>> &lines_curr)
         {
 
             Eigen::Matrix4d pose_curr_in_w = Eigen::Matrix4d::Identity();
@@ -488,7 +486,7 @@ namespace simulator
                 // 3D point
                 Vec3 point_in_prev = points_prev[i].second;
                 // from camera to world
-                Vec3 point_in_w = pose_prev_in_w.block(0,0,3,3)*point_in_prev + pose_prev_in_w.block(0,3,3,1);  //这里有问题，应该是世界坐标系
+                Vec3 point_in_w = pose_prev_in_w.block(0, 0, 3, 3) * point_in_prev + pose_prev_in_w.block(0, 3, 3, 1); // 这里有问题，应该是世界坐标系
                 for (size_t j = 0; j < points_curr.size(); j++)
                 {
                     // id
@@ -500,7 +498,7 @@ namespace simulator
                         Eigen::Vector2d pixel_curr;
                         GetPixelPosition(point_in_curr, pixel_curr);
                         //
-                        vec_data_pnp[prev_point_id] =std::make_pair(point_in_w, pixel_curr);
+                        vec_data_pnp[prev_point_id] = std::make_pair(point_in_w, pixel_curr);
 
                         break;
                     }
@@ -509,20 +507,20 @@ namespace simulator
 
             // pnp for pose estimation
 
-            if(vec_data_pnp.size()<6)
+            if (vec_data_pnp.size() < 6)
             {
-                std::cout<<"not enough for pnp"<<std::endl;
+                std::cout << "not enough for pnp" << std::endl;
                 return pose_prev_in_w;
             }
             else
             {
                 pose_curr_in_w = PnPComputation(vec_data_pnp);
             }
-                
-            return pose_curr_in_w; 
+
+            return pose_curr_in_w;
         }
 
-        void FuseMapPoint(std::map<int/*mappoint_id*/, Vec3/*posi_in_w*/> &local_map,
+        void FuseMapPoint(std::map<int /*mappoint_id*/, Vec3 /*posi_in_w*/> &local_map,
                           Eigen::Matrix4d &pose_curr_in_w,
                           std::vector<std::pair<int /*point_id*/, Vec3>> &points_curr)
         {
@@ -530,7 +528,7 @@ namespace simulator
             {
                 int curr_point_id = points_curr[j].first;
                 Vec3 point_in_curr = points_curr[j].second;
-                Vec3 new_mappoint = pose_curr_in_w.block(0,0,3,3)*point_in_curr + pose_curr_in_w.block(0,3,3,1);  //这里有问题，应该是世界坐标系
+                Vec3 new_mappoint = pose_curr_in_w.block(0, 0, 3, 3) * point_in_curr + pose_curr_in_w.block(0, 3, 3, 1); // 这里有问题，应该是世界坐标系
 
                 Vec3 point_in_w = local_map[curr_point_id];
                 // valid
@@ -543,8 +541,8 @@ namespace simulator
                 {
                     // fuse
                     // TODO: (weights)
-                    point_in_w = (point_in_w+new_mappoint)/2;
-                    local_map[curr_point_id] = point_in_w;  
+                    point_in_w = (point_in_w + new_mappoint) / 2;
+                    local_map[curr_point_id] = point_in_w;
                 }
             }
         }
@@ -553,15 +551,17 @@ namespace simulator
                          Eigen::Matrix4d &pose_curr_in_w,
                          std::vector<std::pair<int /*line_id*/, Mat32 /*posi_in_cam*/>> &lines_curr)
         {
-            for(size_t j=0; j< lines_curr.size(); j++)
+            for (size_t j = 0; j < lines_curr.size(); j++)
             {
-                int curr_line_id = lines_curr[j].first; 
+                int curr_line_id = lines_curr[j].first;
                 Mat32 line_in_curr = lines_curr[j].second;
 
-                Vec3 new_mapline_s = pose_curr_in_w.block(0,0,3,3)*line_in_curr.col(0) + pose_curr_in_w.block(0,3,3,1);  //这里有问题，应该是世界坐标系
-                Vec3 new_mapline_e = pose_curr_in_w.block(0,0,3,3)*line_in_curr.col(1) + pose_curr_in_w.block(0,3,3,1);  //这里有问题，应该是世界坐标系
-                
+                Vec3 new_mapline_s = pose_curr_in_w.block(0, 0, 3, 3) * line_in_curr.col(0) + pose_curr_in_w.block(0, 3, 3, 1);
+                Vec3 new_mapline_e = pose_curr_in_w.block(0, 0, 3, 3) * line_in_curr.col(1) + pose_curr_in_w.block(0, 3, 3, 1);
+
                 Vec3 new_direction = new_mapline_s - new_mapline_e;
+                double new_distance = new_direction.norm();
+                // std::cout << "lenght:" << new_direction.norm() << std::endl;
                 Eigen::Vector3d new_normal = new_mapline_s.cross(new_mapline_e);
                 new_normal = new_normal.normalized();
                 new_direction = new_direction.normalized();
@@ -571,9 +571,8 @@ namespace simulator
                 new_mapline.col(1) = new_mapline_e;
 
                 Mat32 line_in_w = local_map[curr_line_id];
-                //std::cout<<"ssadas"<< line_in_w<<std::endl;
 
-                if(line_in_w.isZero())
+                if (line_in_w.isZero())
                 {
                     local_map[curr_line_id] = new_mapline;
                 }
@@ -581,28 +580,36 @@ namespace simulator
                 {   //TODO:(weights)
 
                     // fuse
-                    //line_in_w = (line_in_w+new_mapline)/2;
-                    //local_map[curr_line_id] = line_in_w;
+                    // line_in_w = (line_in_w+new_mapline)/2;
+                    // local_map[curr_line_id] = line_in_w;
+                    double localmap_distance = (line_in_w.col(0) - line_in_w.col(1)).norm();
+                    Mat32 new_endpoints;
+                    new_endpoints.col(0) = new_mapline_s;
+                    new_endpoints.col(1) = new_mapline_e;
 
-                    Eigen::Vector3d EndPoints3d_i_s_distance = new_mapline.col(0) - line_in_w.col(0); 
-                    Eigen::Vector3d EndPoints3d_i_e_distance = new_mapline.col(1) - line_in_w.col(0);
-                    
-                
-                    double line_length = (new_mapline.col(0) - new_mapline.col(1)).norm();
-                    if (line_length < 0.1)
-                        continue;
-                    
-                    if (EndPoints3d_i_s_distance.norm() < EndPoints3d_i_e_distance.norm())
+                    if (localmap_distance > new_distance)
                     {
-                        line_in_w = (line_in_w+new_mapline)/2;
-                        local_map[curr_line_id] = line_in_w;
+                        new_endpoints.col(0) = line_in_w.col(0);
+                        new_endpoints.col(1) = line_in_w.col(1);
                     }
-                    else
-                    {
-                        line_in_w.col(0) = line_in_w.col(0) + new_mapline.col(1);
-                        line_in_w.col(1) = line_in_w.col(1) + new_mapline.col(0);
-                        local_map[curr_line_id] = line_in_w/2;
-                    }
+
+                    // Eigen ::Vector3d EndPoints3d_i_s_distance = new_mapline.col(0) - line_in_w.col(0);
+
+                    Vec3 mid_point = (new_endpoints.col(0) + new_endpoints.col(1)) / 2;
+                    // from 1 to 0
+                    Vec3 direction_w = (new_endpoints.col(0) - new_endpoints.col(1)).normalized();
+                    if (direction_w.dot(new_direction) > 0.85)
+                        direction_w = (direction_w + new_direction).normalized();
+                    else if (direction_w.dot(new_direction) < -0.85)
+                        direction_w = (direction_w - new_direction).normalized();
+
+                    Vec3 direc_mid_s = mid_point - new_endpoints.col(1);
+                    local_map[curr_line_id].col(1) = mid_point - (direc_mid_s.dot(direction_w)) * direction_w;
+
+                    Vec3 direc_mid_e = new_endpoints.col(0) - mid_point;
+                    local_map[curr_line_id].col(0) = mid_point + (direc_mid_e.dot(direction_w)) * direction_w;
+
+                    Eigen::Vector3d EndPoints3d_i_e_distance = new_mapline.col(1) - new_endpoints.col(0);
                 }
             }
         }
@@ -724,8 +731,6 @@ namespace simulator
                 vec_mpid_xyz_.push_back(std::make_pair(reconstructed_xyz_id, point_w));
                 vec_mpid_frameid_.push_back(std::make_pair(reconstructed_xyz_id, observations));
             }
-
-
         }
 
        /**
@@ -762,18 +767,19 @@ namespace simulator
 
         void GetInitFramePosesVect(std::vector<Mat4> &kfs)
         {
-            for(auto mit=vec_localmap_Twc_.begin(); mit!=vec_localmap_Twc_.end(); mit++)
-            {
-                int frame_id = mit->first;
-                Mat4 frame_pose = mit->second;
-                kfs.push_back(frame_pose);
-            }
-            // for(auto mit=vec_vo_Twc_.begin(); mit!=vec_vo_Twc_.end(); mit++)
+            // for(auto mit=vec_localmap_Twc_.begin(); mit!=vec_localmap_Twc_.end(); mit++)
             // {
             //     int frame_id = mit->first;
             //     Mat4 frame_pose = mit->second;
             //     kfs.push_back(frame_pose);
             // }
+            for (auto mit = vec_vo_Twc_.begin(); mit != vec_vo_Twc_.end(); mit++)
+            {
+                int frame_id = mit->first;
+                Mat4 frame_pose = mit->second;
+                std::cout << "*****************" << frame_pose << std::endl;
+                kfs.push_back(frame_pose);
+            }
         }
 
         
@@ -830,7 +836,6 @@ namespace simulator
                 Vec3 trans = Twc_i.block(0, 3, 3, 1);
                 pose_file << frame_id << " " << trans(0) << " " << trans(1) << " " << trans(2) << " " << quat.x() << " " << quat.y() << " " << quat.z() << " " << quat.w() << std::endl;
             }
-
 
             pose_file.close();
         }

@@ -19,7 +19,6 @@
 #include "src/utils/UtilStruct.hpp"
 #include <Eigen/StdVector>
 #include <Eigen/src/Core/Matrix.h>
-#include <omp.h>
 
 namespace simulator
 {
@@ -75,7 +74,6 @@ namespace simulator
         std::string traj_path;
         std::string envpoint_path_;
         std::string envline_path_;
-        std::string associate_path_;
         int traj_num;
         int envpoint_num;
         int envline_num;
@@ -104,7 +102,6 @@ namespace simulator
             settings["Env.Public.envtraj_path"] >> traj_path;
             settings["Env.Public.envpoint_path"] >> envpoint_path_;
             settings["Env.Public.envline_path"] >> envline_path_;
-            settings["Env.Public.associate_path"] >> associate_path_;
 
             // set cameras
             ptr_robot_trajectory_ = new simulator::Trajectory(traject_type, frame_num, settings);
@@ -266,8 +263,8 @@ namespace simulator
                 assert(ptr_ep->pos_world_[0] != -10000); // haven't been initialized
 
                 ptr_ep->AddObservation(ptr_robot_trajectory_->groundtruth_traject_id_Twc_, b_add_noise_to_meas);
-                if (ptr_ep->obs_frame_pos_.size() < 3)
-                    std::cout << ">>>>> mp_id:" << id << std::endl;
+                // if (ptr_ep->obs_frame_pos_.size() < 3)
+                //     std::cout << ">>>>> mp_id:" << id << std::endl;
                 for (auto ob = ptr_ep->obs_frame_pos_.begin(), ob_end = ptr_ep->obs_frame_pos_.end(); ob != ob_end; ob++)
                 {
                     int frame_id = ob->first;
@@ -337,7 +334,7 @@ namespace simulator
                 ptr_ep->AddObservation(ptr_robot_trajectory_->groundtruth_traject_id_Twc_, b_add_noise_to_meas);
                 if (ptr_ep->obs_frame_pos_.size() < 3)
                 {
-                    std::cout << ">>>>> mp_id:" << id << std::endl;
+                    // std::cout << ">>>>> mp_id:" << id << std::endl;
                     delete ptr_tracker_;
 
                     id--;
@@ -384,11 +381,20 @@ namespace simulator
             for (auto plane : ptr_robot_trajectory_->cube_left_planes_)
             {
                 // std::cout<<"plane_id:"<<plane.first<<std::endl;
+                // if (plane.first == "left")
+                //     continue;
+                // if (plane.first == "right")
+                //     continue;
                 planes.push_back(plane.second);
             }
             for (auto plane : ptr_robot_trajectory_->cube_bottom_planes_)
             {
                 // std::cout<<"plane_id:"<<plane.first<<std::endl;
+                // std::cout<<"plane_id:"<<plane.first<<std::endl;
+                // if (plane.first == "left")
+                //     continue;
+                // if (plane.first == "right")
+                //     continue;
                 planes.push_back(plane.second);
             }
             for (auto plane : ptr_robot_trajectory_->cube_right_planes_)
@@ -412,8 +418,8 @@ namespace simulator
                 assert(ptr_ep->pos_world_[0] != -10000); // haven't been initialized
 
                 ptr_ep->AddObservation(ptr_robot_trajectory_->groundtruth_traject_id_Twc_, b_add_noise_to_meas);
-                if (ptr_ep->obs_frame_pos_.size() < 3)
-                    std::cout << ">>>>> mp_id:" << id << std::endl;
+                // if (ptr_ep->obs_frame_pos_.size() < 3)
+                //     std::cout << ">>>>> mp_id:" << id << std::endl;
                 for (auto ob = ptr_ep->obs_frame_pos_.begin(), ob_end = ptr_ep->obs_frame_pos_.end(); ob != ob_end; ob++)
                 {
                     int frame_id = ob->first;
@@ -565,7 +571,7 @@ namespace simulator
 
                 if (ptr_ml->obs_frameid_linepos_.size() < 3)
                 {
-                    std::cout << ">>>>> mp_id:" << id << std::endl;
+                    // std::cout << ">>>>> mp_id:" << id << std::endl;
                     delete ptr_ml;
                     id--;
                     continue;
@@ -758,38 +764,14 @@ namespace simulator
 
         void BuildPublicPoints()
         {
-            std::vector<std::pair<int /*point_id*/, Eigen::Vector3d>> pts;
+            std::vector<Eigen::Vector3d> pts;
             IO::ReadPublicPointClouds(envpoint_path_, pts);
-            std::vector<std::pair<int, int>> asso_epid_frameid;
-            IO::ReadPublicPointAssociation(associate_path_, asso_epid_frameid);
-
-            // for (int id = 0; id < pts.size(); id++)
-            // {
-            //     simulator::EnvPoint *ptr_ep = new simulator::EnvPoint(id, ptr_robot_trajectory_); // MapPoint(id, ptr_robot_trajectory_);
-            //     ptr_ep->GenerateEnvPoint(pts[id]);
-
-            //     ptr_ep->AddObservation(ptr_robot_trajectory_->groundtruth_traject_id_Twc_, b_add_noise_to_meas);
-            //     for (auto ob = ptr_ep->obs_frame_pos_.begin(), ob_end = ptr_ep->obs_frame_pos_.end(); ob != ob_end; ob++)
-            //     {
-            //         int frame_id = ob->first;
-            //         Vec3 pos_in_cam = ob->second;
-            //         asso_frameid_epid_[frame_id].push_back(std::make_pair(id, pos_in_cam));
-            //     }
-            //     // association
-            //     asso_epid_frameid_pixeld_[id] = ptr_ep->obs_frame_pixel_;
-            //     asso_epid_frameid_pos_[id] = ptr_ep->obs_frame_pos_;
-            //     // gt
-            //     v_points_.push_back(ptr_ep->pos_world_);
-            //     vec_epid_pos_w_.push_back(std::make_pair(ptr_ep->num_id_, ptr_ep->pos_world_)); // after checking
-            // }
-
-            for (auto pt : pts)
+            for (int id = 0; id < pts.size(); id++)
             {
-                int id = pt.first;
                 simulator::EnvPoint *ptr_ep = new simulator::EnvPoint(id, ptr_robot_trajectory_); // MapPoint(id, ptr_robot_trajectory_);
-                ptr_ep->GenerateEnvPoint(pt.second);
+                ptr_ep->GenerateEnvPoint(pts[id]);
 
-                ptr_ep->AddObservation(ptr_robot_trajectory_->groundtruth_traject_id_Twc_, asso_epid_frameid, b_add_noise_to_meas);
+                ptr_ep->AddObservation(ptr_robot_trajectory_->groundtruth_traject_id_Twc_, b_add_noise_to_meas);
                 for (auto ob = ptr_ep->obs_frame_pos_.begin(), ob_end = ptr_ep->obs_frame_pos_.end(); ob != ob_end; ob++)
                 {
                     int frame_id = ob->first;
@@ -803,14 +785,6 @@ namespace simulator
                 v_points_.push_back(ptr_ep->pos_world_);
                 vec_epid_pos_w_.push_back(std::make_pair(ptr_ep->num_id_, ptr_ep->pos_world_)); // after checking
             }
-        }
-
-        void BuildPublicPointAssociations()
-        {
-            // std::map<int /*envpoint_id*/, int /*frame_id*/> asso_epid_frameid;
-            std::vector<std::pair<int, int>> asso_epid_frameid;
-            IO::ReadPublicPointAssociation(associate_path_, asso_epid_frameid);
-            //  std::map<int /*envpoint_id*/, frame_point_meas /*uvd*/> asso_epid_frameid_pixeld_;
         }
 
         void GetBoundsOfPlane(std::vector<Eigen::Vector3d> &vertices, Eigen::Vector3d &max_bounds, Eigen::Vector3d &min_bounds)
