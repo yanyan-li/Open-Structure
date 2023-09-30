@@ -357,6 +357,195 @@ namespace simulator
             SaveFramePredictedTrajectoryLovelyTUM(root_path + "estimated_localmap.txt", vec_localmap_Twc_);
         }
 
+        /**
+         * @brief pose estimation based on traditional methods
+         *
+         */
+        void TrackOdometryPtr(std::string root_path, bool with_localmap, bool with_lines, std::vector<Eigen::Matrix4d> &initial_poses)
+        {
+            std::vector<std::pair<int /*frame_id*/, Eigen::Matrix4d /*frame_pose*/>> vec_vo_estimated_Twc;
+            // std::vector<std::pair<int/*frame_id*/,  Eigen::Matrix4d/*frame_pose*/>> vec_localmap_Twc;
+            std::vector<std::pair<int /*frame_id*/, Eigen::Matrix4d /*frame_pose*/>> vec_gt_Twc;
+
+            std::vector<Vec3> vec_mappoint;
+            for (auto frame : robot_traject_->groundtruth_traject_id_Twc_)
+            // for (int frame_id = 0, frame_id_end = robot_traject_->vec_traject_gt_Twc_.size(); frame_id < frame_id_end; frame_id++)
+            {
+                int frame_id = frame.first;
+                // std::cout<<"\033[0;31mThis is the "<<frame_id<<"th frame.\033[0m"<<std::endl;
+                // pose in the world coordinate
+                Mat4 prev_pose_in_world, curr_gt_pose_in_world;
+                // relative pose from i-1 to i
+                Mat4 pose_curr_in_prev, pose_gt_curr_in_prev;
+                // map tracking from map to i
+                Mat4 pose_curr_in_map;
+
+                if (frame_id == 0)
+                {
+                    prev_pose_in_world = frame.second;    // robot_traject_->vec_traject_gt_Twc_[frame_id];
+                    curr_gt_pose_in_world = frame.second; // robot_traject_->vec_traject_gt_Twc_[frame_id];
+                    pose_curr_in_map = frame.second;      // robot_traject_->vec_traject_gt_Twc_[frame_id];
+
+                    for (auto frame_info : obs_point_)
+                    {
+                        int frame_idx = frame_info.first;
+                        if (frame_idx != frame_id)
+                            continue;
+                        for (auto frame_meas : frame_info.second)
+                        {
+                            int point_id = frame_meas.first;
+                            Vec3 point_in_cam = frame_meas.second;
+                            // from camera to world
+                            Vec3 point_in_w = prev_pose_in_world.block(0, 0, 3, 3) * point_in_cam +
+                                              prev_pose_in_world.block(0, 3, 3, 1); // 这里有问题，应该是世界坐标系
+
+                            local_mappoints_[point_id] = point_in_w;
+#ifdef __DEBUG__OFF
+                            for (auto epid_pos : vec_epid_pos_w_)
+                                if (epid_pos.first == point_id)
+                                    std::cout << "point distance:" << (epid_pos.second - point_in_w).norm() << std::endl;
+#endif
+                        }
+                    }
+
+                    // for (size_t i = 0; i < obs_point_[frame_id].size(); i++)
+                    // {
+                    //     // id
+                    //     int point_id = obs_point_[frame_id][i].first;
+                    //     // 3D point
+                    //     Vec3 point_in_cam = obs_point_[frame_id][i].second;
+                    //     assert(point_in_cam.z()>0.001);
+
+                    //     // from camera to world
+                    //     Vec3 point_in_w = prev_pose_in_world.block(0, 0, 3, 3) * point_in_cam +
+                    //                                  prev_pose_in_world.block(0, 3, 3, 1); // 这里有问题，应该是世界坐标系
+                    //     local_mappoints_[point_id] = point_in_w;
+                    // }
+                    for (auto frame_info : obs_line_)
+                    {
+                        int frame_idx = frame_info.first;
+                        if (frame_idx != frame_id)
+                            continue;
+                        for (auto frame_meas : frame_info.second)
+                        {
+                            int line_id = frame_meas.first;
+                            Mat32 line_in_cam = frame_meas.second;
+                            // from camera to world
+                            Mat32 t_in_world;
+                            t_in_world.block(0, 0, 3, 1) = prev_pose_in_world.block(0, 3, 3, 1);
+                            t_in_world.block(0, 1, 3, 1) = prev_pose_in_world.block(0, 3, 3, 1);
+
+                            Mat32 line_in_w = prev_pose_in_world.block(0, 0, 3, 3) * line_in_cam + t_in_world;
+                            local_maplines_[line_id] = line_in_w;
+                        }
+                    }
+
+                    // for(size_t i=0; i<obs_line_[frame_id].size(); i++)
+                    // {
+                    //     // id
+                    //     int line_id = obs_line_[frame_id][i].first;
+                    //     // 3D line
+                    //     Mat32 line_in_cam = obs_line_[frame_id][i].second;
+                    //     // from camera to world
+                    //     Mat32 t_in_world;
+                    //     t_in_world.block(0,0,3,1) =  prev_pose_in_world.block(0, 3, 3, 1);
+                    //     t_in_world.block(0,1,3,1) =  prev_pose_in_world.block(0, 3, 3, 1);
+
+                    //     Mat32 line_in_w = prev_pose_in_world.block(0, 0, 3, 3) * line_in_cam + t_in_world;
+                    //     local_maplines_[line_id] = line_in_w;
+                    // }
+                }
+                else
+                {
+                    DrawMeasurements(obs_point_[frame_id], obs_line_[frame_id], frame_id);
+                    // relative pose  T_{prev, curr}
+                    pose_curr_in_prev = RelativePoseEstimation(prev_pose_in_world,
+                                                               obs_point_[frame_id - 1],
+                                                               obs_line_[frame_id - 1],
+                                                               obs_point_[frame_id],
+                                                               obs_line_[frame_id]);
+
+                    if (with_localmap)
+                    {
+                        pose_curr_in_map = LocalMapPoseEstimation(vec_epid_pos_w_,
+                                                                  obs_point_[frame_id],
+                                                                  frame.second,
+                                                                  frame_id); //
+                                                                             // robot_traject_->vec_traject_gt_Twc_[frame_id]);
+                        if (pose_curr_in_map.isIdentity())
+                        {
+                            std::cout << "problems in localmap_pose" << std::endl;
+                            std::cout << "\033[0;31mThis is the " << frame_id << "th frame.\033[0m" << std::endl;
+                            std::cout << "obs_point_[frame_id]:" << obs_point_[frame_id].size() << std::endl;
+
+                            for (int i = 0; i < obs_point_[frame_id].size(); i++)
+                                std::cout << obs_point_[frame_id].size() << ","
+                                          << obs_point_[frame_id][i].first << ","
+                                          << obs_point_[frame_id][i].second(0) << ","
+                                          << obs_point_[frame_id][i].second(1) << ","
+                                          << obs_point_[frame_id][i].second(2) << std::endl;
+                            // init local_mappoints
+                            //  return;
+                            pose_curr_in_map = prev_pose_in_world;
+                        }
+                    }
+
+                    if (!with_lines)
+                    {
+                        if (with_localmap)
+                            FuseMapPoint(local_mappoints_, pose_curr_in_map, obs_point_[frame_id]);
+                        else
+                            FuseMapPoint(local_mappoints_, pose_curr_in_prev, obs_point_[frame_id]);
+                    }
+                    else if (with_lines)
+                    {
+                        if (with_localmap)
+                        {
+                            FuseMapPoint(local_mappoints_, pose_curr_in_map, obs_point_[frame_id]);
+                            FuseMapLine(local_maplines_, pose_curr_in_map, obs_line_[frame_id]);
+                        }
+                        else
+                        {
+
+                            FuseMapPoint(local_mappoints_, pose_curr_in_prev, obs_point_[frame_id]);
+                            FuseMapLine(local_maplines_, pose_curr_in_prev, obs_line_[frame_id]);
+                        }
+                    }
+
+                    // relative gt pose: T_{curr, prev} = T_{w, curr}.inverse() * T_{w, prev}
+                    // pose_gt_curr_in_prev = robot_traject_->vec_traject_gt_Twc_[frame_id].inverse() * robot_traject_->vec_traject_gt_Twc_[frame_id - 1];
+                    // curr_gt_pose_in_world = robot_traject_->vec_traject_gt_Twc_[frame_id];
+                    prev_pose_in_world = pose_curr_in_map;
+                    pose_gt_curr_in_prev = frame.second.inverse() * robot_traject_->groundtruth_traject_id_Twc_[frame_id - 1];
+                    curr_gt_pose_in_world = frame.second;
+                    prev_pose_in_world = pose_curr_in_map;
+                }
+
+                vec_vo_Twc_.push_back(std::make_pair(frame_id, prev_pose_in_world));
+                vec_gt_Twc.push_back(std::make_pair(frame_id, curr_gt_pose_in_world));
+                vec_localmap_Twc_.push_back(std::make_pair(frame_id, pose_curr_in_map));
+#ifdef __VERBOSE__NOT
+                std::cout << "ground truth pose:" << std::endl
+                          << curr_gt_pose_in_world << std::endl;
+                std::cout << "predicted pose (T_{w,i}):" << std::endl
+                          << prev_pose_in_world << std::endl;
+                // std::cout << "relative ground truth pose:" << std::endl
+                //           << pose_gt_curr_in_prev << std::endl;
+                // std::cout << "relative pose (T_{i-1,i}):" << std::endl
+                //           << pose_curr_in_prev << std::endl;
+                std::cout << "predicted pose in map (T_{w,i}):" << std::endl
+                          << pose_curr_in_map << std::endl;
+#endif
+                InsertFramePosesVect(initial_poses, prev_pose_in_world);
+            }
+            mbTrackOdometry = true;
+            cv::destroyAllWindows();
+
+            SaveFramePredictedTrajectoryLovelyTUM(root_path + "estimated_vo.txt", vec_vo_Twc_);
+            SaveFramePredictedTrajectoryLovelyTUM(root_path + "ground_pose.txt", vec_gt_Twc);
+            SaveFramePredictedTrajectoryLovelyTUM(root_path + "estimated_localmap.txt", vec_localmap_Twc_);
+        }
+
         Eigen::Matrix4d LocalMapPoseEstimation(std::vector<std::pair<int /*point_id*/, Vec3>> &vec_epid_pos_w,
                                                std::vector<std::pair<int /*point_id*/, Vec3>> &points_curr,
                                                Eigen::Matrix4d &gt_pose,
@@ -773,6 +962,7 @@ namespace simulator
             //     Mat4 frame_pose = mit->second;
             //     kfs.push_back(frame_pose);
             // }
+            kfs.clear();
             for (auto mit = vec_vo_Twc_.begin(); mit != vec_vo_Twc_.end(); mit++)
             {
                 int frame_id = mit->first;
@@ -782,7 +972,23 @@ namespace simulator
             }
         }
 
-        
+        void InsertFramePosesVect(std::vector<Mat4> &kfs, Mat4 kf)
+        {
+            // for(auto mit=vec_localmap_Twc_.begin(); mit!=vec_localmap_Twc_.end(); mit++)
+            // {
+            //     int frame_id = mit->first;
+            //     Mat4 frame_pose = mit->second;
+            //     kfs.push_back(frame_pose);
+            // }
+            // kfs.clear();
+            // for (auto mit = vec_vo_Twc_.begin(); mit != vec_vo_Twc_.end(); mit++)
+            // {
+            //     int frame_id = mit->first;
+            //     Mat4 frame_pose = mit->second;
+            //     std::cout << "*****************" << frame_pose << std::endl;
+            kfs.push_back(kf);
+        }
+
         /**
          * @brief Get the Init Map Lines object
          * 

@@ -342,10 +342,10 @@ namespace simulator
                     {
 
                         simulator::optimizer::CovisPointLineBA::optimizer(ptr_robot_trajectory_,
-                                                                                        venom_factorgraph,
-                                                                                        optimized_mappoints_,
-                                                                                        optimized_maplines_,
-                                                                                        Twcs_factorgraph);
+                                                                          venom_factorgraph,
+                                                                          optimized_mappoints_,
+                                                                          optimized_maplines_,
+                                                                          Twcs_factorgraph);
                         menuShowPoseGraphTrajectory = true;
                         // menuShowOptimizedMapPoints = true;
                         // menuShowOptimizedMapLines = true;
@@ -723,9 +723,9 @@ namespace simulator
             pangolin::Var<bool> menuVisualOdometryPointLine("trackmenu.PL: T&M via VO", false, false);
             pangolin::Var<bool> menuLocalMapPointLine("trackmenu.PL: T&M via VO and LocalMap", false, false);
             // initial pose and landmarks
-            pangolin::Var<bool> menuShowInitialPoses("trackmenu.Initial Poses", false, true);
-            pangolin::Var<bool> menuShowInitialMapPoints("trackmenu.Initial MapPoints", false, true);
-            pangolin::Var<bool> menuShowInitialMapLines("trackmenu.Initial MapLines", false, true);
+            pangolin::Var<bool> menuShowInitialPoses("trackmenu.Initial Poses", true, true);
+            pangolin::Var<bool> menuShowInitialMapPoints("trackmenu.Initial MapPoints", true, true);
+            pangolin::Var<bool> menuShowInitialMapLines("trackmenu.Initial MapLines", true, true);
             pangolin::Var<bool> start_ba("trackmenu.Optimization Preparation", false, false);
             // optimization
             // pangolin::Var<bool> menuPointBAGTSAM("trackmenu.CovisPointBA GTSAM", false, false);
@@ -745,6 +745,9 @@ namespace simulator
 
             std::map<int, Eigen::Matrix4d> Twcs_factorgraph;
             std::vector<Eigen::Matrix4d> optimized_poses;
+            std::vector<Mat32> lines;
+            std::vector<Vec3> points;
+
             std::vector<Eigen::Matrix4d> initial_poses;
             while (!pangolin::ShouldQuit())
             {
@@ -829,7 +832,9 @@ namespace simulator
                     else if (menuLocalMapPointLine) // TODO: Check
                     {
                         // ptr_tracker_->TrackOdometry(root_path_, true, true);
-                        std::thread *ptr_thread_ptr_tracker_ = new std::thread(&Track::TrackOdometry, ptr_tracker_, root_path_, true, true);
+                        // initial_poses.clear();
+                        std::thread *ptr_thread_ptr_tracker_ = new std::thread(&Track::TrackOdometryPtr, ptr_tracker_, root_path_, true, true, std::ref(initial_poses));
+                        ptr_thread_ptr_tracker_->detach();
                         // ptr_tracker_->TrackOdometry(root_path_, true, true);
                         // ptr_tracker_->GetInitFramePosesVect(initial_poses);
                         menuVisualOdometryPointLine = false;
@@ -855,7 +860,7 @@ namespace simulator
                 {
                     if (menuVisualOdometryPointLine || menuLocalMapPointLine)
                     {
-                        ptr_tracker_->GetInitFramePosesVect(initial_poses);
+                        // ptr_tracker_->GetInitFramePosesVect(initial_poses);
 
                         // Eigen::Vector3d color_initial_;
                         // std::vector<Vec3> points_initial_;
@@ -922,8 +927,8 @@ namespace simulator
                     }
                     else
                     {
-                        initial_poses.clear();
-                        ptr_tracker_->GetInitFramePosesVect(initial_poses);
+
+                        // ptr_tracker_->GetInitFramePosesVect(initial_poses);
                         if (initial_poses.size() > 3)
                         {
                             DrawTrajectoryConnection(MsTrue, initial_poses, Vec3(0.4, 0.1, 0.0));
@@ -935,11 +940,11 @@ namespace simulator
                 if (menuShowOptimizedMapPoints)
                 {
                     Eigen::Vector3d color(0.1, 0.5, 0.1);
-                    std::vector<Vec3> points;
-                    for (auto mit = optimized_mappoints_.begin(); mit != optimized_mappoints_.end(); mit++)
-                    {
-                        points.push_back(mit->second);
-                    }
+                    // std::vector<Vec3> points;
+                    // for (auto mit = optimized_mappoints_.begin(); mit != optimized_mappoints_.end(); mit++)
+                    // {
+                    //     points.push_back(mit->second);
+                    // }
                     DrawMapPoint(points, color);
                 }
 
@@ -947,19 +952,19 @@ namespace simulator
                 {
                     // DrawOptimizedMapLine();
                     Eigen::Vector3d color(0.1, 0.5, 0.1);
-                    std::vector<Mat32> lines;
-                    for (auto mit = optimized_maplines_.begin(); mit != optimized_maplines_.end(); mit++)
-                    {
-                        lines.push_back(mit->second);
-                    }
+                    // std::vector<Mat32> lines;
+                    // for (auto mit = optimized_maplines_.begin(); mit != optimized_maplines_.end(); mit++)
+                    // {
+                    //     lines.push_back(mit->second);
+                    // }
                     DrawMapLine(lines, color);
                 }
 
                 if (menuShowOptimizedPoses)
                 {
                     std::vector<pangolin::OpenGlMatrix> MsTrue;
-                    for (auto &tws : Twcs_factorgraph)
-                        optimized_poses.push_back(tws.second);
+                    // for (auto &tws : Twcs_factorgraph)
+                    //     optimized_poses.push_back(tws.second);
                     if (optimized_poses.size() > 0)
                     {
                         DrawTrajectoryConnection(MsTrue, optimized_poses, Vec3(0.5, 0.5, 1));
@@ -1005,6 +1010,16 @@ namespace simulator
                                   << std::endl;
 
                         click_do_opti = false;
+                        for (auto &tws : Twcs_factorgraph)
+                            optimized_poses.push_back(tws.second);
+                        // for (auto mit = optimized_maplines_.begin(); mit != optimized_maplines_.end(); mit++)
+                        // {
+                        //     lines.push_back(mit->second);
+                        // }
+                        for (auto mit = optimized_mappoints_.begin(); mit != optimized_mappoints_.end(); mit++)
+                        {
+                            points.push_back(mit->second);
+                        }
                         // menuPointBAGTSAM.Detach();
                         menuPointBACeres.Detach();
                         menuPointLineBA.Detach();
@@ -1027,6 +1042,16 @@ namespace simulator
                                      "cameras. \033[0m"
                                   << std::endl;
                         click_do_opti = false;
+                        for (auto &tws : Twcs_factorgraph)
+                            optimized_poses.push_back(tws.second);
+                        for (auto mit = optimized_maplines_.begin(); mit != optimized_maplines_.end(); mit++)
+                        {
+                            lines.push_back(mit->second);
+                        }
+                        for (auto mit = optimized_mappoints_.begin(); mit != optimized_mappoints_.end(); mit++)
+                        {
+                            points.push_back(mit->second);
+                        }
                         // menuPointBAGTSAM.Detach();
                         menuPointBACeres.Detach();
                         menuPointLineBA.Detach();
@@ -1070,6 +1095,17 @@ namespace simulator
                                   << "\033[0;35m[Venom Similator Printer] Optimize reconstructed landmarks and "
                                      "cameras. \033[0m"
                                   << std::endl;
+
+                        for (auto &tws : Twcs_factorgraph)
+                            optimized_poses.push_back(tws.second);
+                        for (auto mit = optimized_maplines_.begin(); mit != optimized_maplines_.end(); mit++)
+                        {
+                            lines.push_back(mit->second);
+                        }
+                        for (auto mit = optimized_mappoints_.begin(); mit != optimized_mappoints_.end(); mit++)
+                        {
+                            points.push_back(mit->second);
+                        }
                         click_do_opti = false;
                         // menuPointBAGTSAM.Detach();
                         menuPointBACeres.Detach();
