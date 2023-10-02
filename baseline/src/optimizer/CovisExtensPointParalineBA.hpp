@@ -34,12 +34,12 @@ namespace simulator
                 std::map<int, Eigen::Matrix4d> &optimized_poses)
             {
                 // set parameters
-                constexpr size_t first_kf_id_in_map = 0;
-                constexpr int opmization_times = 1;
-                constexpr int max_iters = 5;
+                // constexpr size_t first_kf_id_in_map = 0;
+                // constexpr int opmization_times = 1;
+                // constexpr int max_iters = 5;
                 constexpr int min_obser_num = 3;
-                const float huber_thres = 1.5;
-                const float pixel_sigma = 1.5;
+                // const float huber_thres = 1.5;
+                // const float pixel_sigma = 1.5;
 
                 double fx;
                 double fy;
@@ -53,7 +53,7 @@ namespace simulator
                 // parameters
                 ceres::Problem problem;
                 ceres::LossFunction *loss_function = nullptr;
-                ceres::ParameterBlockOrdering *ordering = new ceres::ParameterBlockOrdering();
+                // ceres::ParameterBlockOrdering *ordering = new ceres::ParameterBlockOrdering();
                 ceres::LocalParameterization *pose_parameterization = new PoseLocalParameterization();
                 loss_function = new ceres::CauchyLoss(1.0);
 
@@ -392,7 +392,7 @@ namespace simulator
 
                     for (int i = 0; i < asso_ml_mea->second.size(); i++)
                     {
-                        int kf_id_i = asso_ml_mea->second[i].first;
+                        // int kf_id_i = asso_ml_mea->second[i].first;
                         Eigen::Vector4d ml_obser_i = asso_ml_mea->second[i].second;
                         Eigen::Vector4d mp_obser_i_unit(
                             (ml_obser_i(0) - cx) / fx,

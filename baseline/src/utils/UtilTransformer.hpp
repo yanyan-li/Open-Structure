@@ -225,8 +225,8 @@ class UtiliLine {
 
     double s_varphi = sin(theta[1]);
     double c_varphi = cos(theta[1]);
-    
-    double s_alpha = sin(theta[2]);
+
+    // double s_alpha = sin(theta[2]);
     double c_alpha = cos(theta[2]); 
     
     Eigen::Vector3d U_2 = Eigen::Vector3d(
@@ -239,7 +239,7 @@ class UtiliLine {
 
     double w1 = cos(phi);
     double w2 = sin(phi);
-    double d = w1 / w2;  // 原点到直线的距离
+    // double d = w1 / w2;  // 原点到直线的距离
 
     // Vector3d u1 = R.col(0);
     // Vector3d u2 = R.col(1);
@@ -277,7 +277,7 @@ class UtiliLine {
 
   static void ParaLineUniqueInitialization(const Vector6d &PLK0, const Vector6d &PLK1, Vector2d &unique)
   {
-    Eigen::Vector3d LineDirection = PLK0.tail(3).normalized();
+    // Eigen::Vector3d LineDirection = PLK0.tail(3).normalized();
     Eigen::Vector3d LinePlaneNormal0 = PLK0.head(3).normalized();
     Eigen::Vector3d LinePlaneNormal1 = PLK1.head(3).normalized();
 
@@ -292,7 +292,7 @@ class UtiliLine {
 
   static Vector4d PLK2ParaLine(Vector6d &PLK, Eigen::Matrix<double, 3, 2>& TangentBasisVectors){
     Eigen::Vector3d LineDirection = PLK.tail(3).normalized();
-    Eigen::Vector3d LinePlaneNormal = PLK.head(3).normalized();
+    // Eigen::Vector3d LinePlaneNormal = PLK.head(3).normalized();
     double distance = PLK.head(3).norm() / PLK.tail(3).norm();
 
     TangentBasisVectors = TangentBasis(LineDirection);
@@ -323,8 +323,8 @@ class UtiliLine {
 
           Eigen::Vector3d LinePlaneNormal1_in0 = R.transpose() * LinePlaneNormal1;
           LinePlaneNormal1_in0(1, 0) = 0;
-          Eigen::Vector3d LinePlaneNormal1_in0s = LinePlaneNormal1_in0.normalized();
-          double distance1 = PLK1.head(3).norm() / PLK1.tail(3).norm();
+          // Eigen::Vector3d LinePlaneNormal1_in0s = LinePlaneNormal1_in0.normalized();
+          // double distance1 = PLK1.head(3).norm() / PLK1.tail(3).norm();
     }
 
     //double distance1 = LinePlaneNormal1_in0s.norm();

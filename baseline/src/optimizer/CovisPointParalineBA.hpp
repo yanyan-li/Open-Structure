@@ -34,12 +34,12 @@ namespace simulator
                 std::map<int, Eigen::Matrix4d> &optimized_poses)
             {
                 // set parameters
-                constexpr size_t first_kf_id_in_map = 0;
-                constexpr int opmization_times = 1;
-                constexpr int max_iters = 5;
+                // constexpr size_t first_kf_id_in_map = 0;
+                // constexpr int opmization_times = 1;
+                // constexpr int max_iters = 5;
                 constexpr int min_obser_num = 3;
-                const float huber_thres = 1.5;
-                const float pixel_sigma = 1.5;
+                // const float huber_thres = 1.5;
+                // const float pixel_sigma = 1.5;
 
                 double fx;
                 double fy;

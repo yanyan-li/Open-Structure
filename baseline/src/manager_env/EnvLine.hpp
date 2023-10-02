@@ -261,8 +261,8 @@ class EnvLine
             vanishing_direction_ = (pos_world_.block(0, 0, 3, 1) - pos_world_.block(0, 1, 3, 1)).normalized();
         }
     }
-    
-    void GenerateEnvLine(Eigen::Matrix<double, 7, 1> &paraline)
+
+    void GenerateEnvLine(Eigen::Matrix<double, 7, 1> &paraline, bool b_structure = true)
     {
         pos_world_(0, 0) = paraline(1);
         pos_world_(0, 1) = paraline(4);
@@ -271,7 +271,10 @@ class EnvLine
         pos_world_(2, 0) = paraline(3);
         pos_world_(2, 1) = paraline(6);
 
-        vanishing_direction_type_ = paraline(0);
+        if (b_structure)
+            vanishing_direction_type_ = paraline(0);
+        else
+            vanishing_direction_type_ = -1;
         vanishing_direction_ = (pos_world_.block(0, 0, 3, 1) - pos_world_.block(0, 1, 3, 1)).normalized();
         length = (pos_world_.col(0)-pos_world_.col(1)).norm();
     }
@@ -423,7 +426,113 @@ class EnvLine
             std::cout << "The " << this->num_id_ << " mapline didn't be detected by any frames." << std::endl;
     }
 
-    bool LineFeaturesOnImage(Mat32 uvd, double min_x, double min_y, double max_x, double max_y, Mat32 &uvd_out)
+    void AddObservation(std::map<int /*frame_id*/, Mat4 /*frame_pose*/> keyframes_Twcs,
+                        std::vector<std::pair<int /*point_id*/, Eigen::Matrix<double, 7, 1> /*frame_id*/>> &associate,
+                        bool add_noise_to_meas) // TODO: It's better to use frame_id and frame_pose, rather than i;
+    {
+        for (auto asso_i : associate)
+        {
+            int line_id = asso_i.first;
+            if (num_id_ == line_id)
+            {
+                int i = asso_i.second[0];
+                auto Twc = keyframes_Twcs[i];
+                Mat4 Tcw = Twc.inverse();
+                Eigen::Matrix3d Rcw = Tcw.block(0, 0, 3, 3);
+                Mat32 tcw(Mat32::Zero());
+                // Vec3 tcw = Tcw.block(0, 3, 3, 1);
+
+                tcw.block(0, 0, 3, 1) = Tcw.block(0, 3, 3, 1);
+                tcw.block(0, 1, 3, 1) = Tcw.block(0, 3, 3, 1);
+
+                Mat32 pos_in_i;
+                Vec2 depth_in_i;
+                // in the camera coordinate
+                pos_in_i = Rcw * pos_world_ + tcw;
+
+                Mat32 uvd_out = Mat32::Zero();
+                uvd_out.block(0, 0, 3, 1) << asso_i.second[1], asso_i.second[2], asso_i.second[3];
+                uvd_out.block(0, 1, 3, 1) << asso_i.second[4], asso_i.second[5], asso_i.second[6];
+
+                auto AddNoise = [&](Vec3 &pixel_d_coord, Vec3 &meas_3d)
+                {
+                    double noise_x, noise_y, noise_z;
+                    noise_x = pixel_n_(generator_);
+                    noise_y = pixel_n_(generator_);
+                    noise_z = depth_n_(generator_); // with noise
+                    if (noise_z > 0.1)
+                        noise_z = 0.08;
+                    pixel_d_coord(0, 0) += noise_x;
+                    pixel_d_coord(1, 0) += noise_y;
+                    // pixel_d_coord(2, 0) += noise_z;
+                    std::cout << "z-noise" << pixel_d_coord(2, 0);
+                    pixel_d_coord(2, 0) = 35130 / (35130 / (pixel_d_coord(2, 0) + noise_z) + 0.5 + 0.5);
+                    std::cout << "," << pixel_d_coord(2, 0) << std::endl;
+                    double x_s =
+                        pixel_d_coord(2, 0) * (pixel_d_coord(0, 0) - traject_->cam_intri.cx) / traject_->cam_intri.fx;
+                    double y_s =
+                        pixel_d_coord(2, 0) * (pixel_d_coord(1, 0) - traject_->cam_intri.cy) / traject_->cam_intri.fy;
+                    meas_3d(0, 0) = x_s;
+                    meas_3d(1, 0) = y_s;
+                    meas_3d(2, 0) = pixel_d_coord(2, 0);
+                };
+
+                Vec3 pixel_d_coord_s, pixel_d_coord_e;
+                Vec3 meas_3d_coord_s, meas_3d_coord_e;
+
+                Mat32 pixel_d_coord;
+
+                // For 3D lines
+                Mat32 meas_3d_in_i; // endpoints representation
+                // pixel_d_coord_s << u_s, v_s, depth_s;
+                // pixel_d_coord_e << u_e, v_e, depth_e;
+                pixel_d_coord_s << uvd_out.col(0)(0), uvd_out.col(0)(1), uvd_out.col(0)(2);
+                pixel_d_coord_e << uvd_out.col(1)(0), uvd_out.col(1)(1), uvd_out.col(1)(2);
+
+                if (add_noise_to_meas)
+                {
+                    AddNoise(pixel_d_coord_s, meas_3d_coord_s);
+                    AddNoise(pixel_d_coord_e, meas_3d_coord_e);
+                }
+
+                meas_3d_in_i.block(0, 0, 3, 1) = meas_3d_coord_s;
+                meas_3d_in_i.block(0, 1, 3, 1) = meas_3d_coord_e;
+
+                pixel_d_coord.block(0, 0, 3, 1) = pixel_d_coord_s;
+                pixel_d_coord.block(0, 1, 3, 1) = pixel_d_coord_e;
+                obs_frameid_linepixel_[i] = pixel_d_coord;
+
+#ifdef __DEBUG__OFF
+                std::cout << ">>>> in the " << i << "th frame, of total " << keyframes_Twcs.size() << "frames:" << std::endl;
+                std::cout << "groundtruth uv-d:" << u_s << "," << v_s << "," << depth_s << ";"
+                          << u_e << "," << v_e << "," << depth_e << std::endl;
+                std::cout << "noisy uv-d:" << pixel_d_coord_s(0, 0) << "," << pixel_d_coord_s(1, 0) << "," << pixel_d_coord_s(2, 0) << ";"
+                          << pixel_d_coord_e(0, 0) << "," << pixel_d_coord_e(1, 0) << "," << pixel_d_coord_e(2, 0) << std::endl;
+                std::cout << "groundtruth endpoints in cam:" << pos_in_i(0, 0) << "," << pos_in_i(1, 0) << "," << pos_in_i(2, 0) << ";"
+                          << pos_in_i(0, 1) << "," << pos_in_i(1, 1) << "," << pos_in_i(2, 1) << std::endl;
+                std::cout << "noisy endpoints in cam:" << meas_3d_in_i(0, 0) << "," << meas_3d_in_i(1, 0) << "," << meas_3d_in_i(2, 0) << ";"
+                          << meas_3d_in_i(0, 1) << "," << meas_3d_in_i(1, 1) << "," << meas_3d_in_i(2, 1) << std::endl;
+#endif
+
+                if (add_noise_to_meas)
+                    obs_frameid_linepos_[i] = meas_3d_in_i;
+                else
+                    obs_frameid_linepos_[i] = pos_in_i;
+
+                // the distance between gt-line and noisy-line
+                Mat32 distance = meas_3d_in_i - pos_in_i;
+                double end_distance = (distance.col(0) - distance.col(1)).norm();
+                double length = (pos_in_i.col(0) - pos_in_i.col(1)).norm();
+
+                observed_++;
+            }
+        }
+        if (observed_ < 2) //
+            std::cout << "The " << this->num_id_ << " mapline didn't be detected by any frames." << std::endl;
+    }
+
+    bool
+    LineFeaturesOnImage(Mat32 uvd, double min_x, double min_y, double max_x, double max_y, Mat32 &uvd_out)
     {
         // Completely inside.
         double u_1, v_1, d_1;
@@ -437,7 +546,7 @@ class EnvLine
 
         // if inside of the image
         bool inside[2] = {false, false};
-        
+
 #ifdef __DEBUG__
         // std::cout<<"test"<< u_1<<","<<v_1<<","<<u_2<<","<<v_2<<std::endl;
         // cv::Mat img = cv::Mat(480, 640, CV_8UC3, cv::Scalar(255, 255, 255));

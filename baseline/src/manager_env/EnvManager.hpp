@@ -74,6 +74,8 @@ namespace simulator
         std::string traj_path;
         std::string envpoint_path_;
         std::string envline_path_;
+        std::string associate_path_;
+        std::string envline_associate_path_;
         int traj_num;
         int envpoint_num;
         int envline_num;
@@ -102,6 +104,7 @@ namespace simulator
             settings["Env.Public.envtraj_path"] >> traj_path;
             settings["Env.Public.envpoint_path"] >> envpoint_path_;
             settings["Env.Public.envline_path"] >> envline_path_;
+            settings["Env.Public.associate_path"] >> associate_path_;
 
             // set cameras
             ptr_robot_trajectory_ = new simulator::Trajectory(traject_type, frame_num, settings);
@@ -733,16 +736,52 @@ namespace simulator
 
         void BuildPublicLines()
         {
-            std::vector<Eigen::Matrix<double, 7, 1>> paralines;
-            IO::ReadPublicLineClouds(envline_path_, paralines);
-            for (int id = 0; id < paralines.size(); id++)
+            // std::vector<Eigen::Matrix<double, 7, 1>> maplines;
+            // IO::ReadPublicLineClouds(envline_path_, maplines);
+            // for (int id = 0; id < maplines.size(); id++)
+            // {
+            //     int set_id = -1;
+            //     simulator::EnvLine *ptr_ml = new simulator::EnvLine(id, ptr_robot_trajectory_);
+            //     ptr_ml->GenerateEnvLine(maplines[id]);
+            //     set_id = ptr_ml->vanishing_direction_type_;
+
+            //     ptr_ml->AddObservation(ptr_robot_trajectory_->groundtruth_traject_id_Twc_, b_add_noise_to_meas);
+            //     for (auto ob = ptr_ml->obs_frameid_linepos_.begin(), ob_end = ptr_ml->obs_frameid_linepos_.end(); ob != ob_end; ob++)
+            //     {
+            //         int frame_id = ob->first;
+            //         Mat32 pos_in_cam = ob->second;
+            //         asso_frameid_elid_[frame_id].push_back(std::make_pair(id, pos_in_cam));
+            //     }
+            //     v_lines_.push_back(ptr_ml->pos_world_);
+
+            //     // association
+            //     // assert(set_id>0);
+            //     if (set_id > 0)
+            //         asso_paralineid_elids_[set_id].push_back(id);
+            //     asso_elid_frameid_pos_[id] = ptr_ml->obs_frameid_linepos_;
+            //     asso_elid_frameid_pixeld_[id] = ptr_ml->obs_frameid_linepixel_;
+            //     // gt
+            //     vec_elid_pos_w_.push_back(std::make_pair(ptr_ml->num_id_, ptr_ml->pos_world_));
+            // }
+
+            std::vector<Eigen::Matrix<double, 7, 1>> maplines;
+            IO::ReadPublicLineClouds(envline_path_, maplines);
+            std::vector<std::pair<int, Eigen::Matrix<double, 7, 1>>> asso_elid_frameid;
+            IO::ReadPublicLineAssociation(associate_path_, asso_elid_frameid);
+
+            for (int i = 0; i < maplines.size(); i++)
             {
                 int set_id = -1;
+
+                double id = maplines[i][0];
+
                 simulator::EnvLine *ptr_ml = new simulator::EnvLine(id, ptr_robot_trajectory_);
-                ptr_ml->GenerateEnvLine(paralines[id]);
+                ptr_ml->GenerateEnvLine(maplines[i], false);
                 set_id = ptr_ml->vanishing_direction_type_;
 
-                ptr_ml->AddObservation(ptr_robot_trajectory_->groundtruth_traject_id_Twc_, b_add_noise_to_meas);
+                ptr_ml->AddObservation(ptr_robot_trajectory_->groundtruth_traject_id_Twc_,
+                                       b_add_noise_to_meas);
+
                 for (auto ob = ptr_ml->obs_frameid_linepos_.begin(), ob_end = ptr_ml->obs_frameid_linepos_.end(); ob != ob_end; ob++)
                 {
                     int frame_id = ob->first;
@@ -764,14 +803,39 @@ namespace simulator
 
         void BuildPublicPoints()
         {
-            std::vector<Eigen::Vector3d> pts;
-            IO::ReadPublicPointClouds(envpoint_path_, pts);
-            for (int id = 0; id < pts.size(); id++)
-            {
-                simulator::EnvPoint *ptr_ep = new simulator::EnvPoint(id, ptr_robot_trajectory_); // MapPoint(id, ptr_robot_trajectory_);
-                ptr_ep->GenerateEnvPoint(pts[id]);
+            // std::vector<Eigen::Vector3d> pts;
+            // IO::ReadPublicPointClouds(envpoint_path_, pts);
+            // for (int id = 0; id < pts.size(); id++)
+            // {
+            //     simulator::EnvPoint *ptr_ep = new simulator::EnvPoint(id, ptr_robot_trajectory_); // MapPoint(id, ptr_robot_trajectory_);
+            //     ptr_ep->GenerateEnvPoint(pts[id]);
 
-                ptr_ep->AddObservation(ptr_robot_trajectory_->groundtruth_traject_id_Twc_, b_add_noise_to_meas);
+            //     ptr_ep->AddObservation(ptr_robot_trajectory_->groundtruth_traject_id_Twc_, b_add_noise_to_meas);
+            //     for (auto ob = ptr_ep->obs_frame_pos_.begin(), ob_end = ptr_ep->obs_frame_pos_.end(); ob != ob_end; ob++)
+            //     {
+            //         int frame_id = ob->first;
+            //         Vec3 pos_in_cam = ob->second;
+            //         asso_frameid_epid_[frame_id].push_back(std::make_pair(id, pos_in_cam));
+            //     }
+            //     // association
+            //     asso_epid_frameid_pixeld_[id] = ptr_ep->obs_frame_pixel_;
+            //     asso_epid_frameid_pos_[id] = ptr_ep->obs_frame_pos_;
+            //     // gt
+            //     v_points_.push_back(ptr_ep->pos_world_);
+            //     vec_epid_pos_w_.push_back(std::make_pair(ptr_ep->num_id_, ptr_ep->pos_world_)); // after checking
+            // }
+            std::vector<std::pair<int /*point_id*/, Eigen::Vector3d>> pts;
+            IO::ReadPublicPointClouds(envpoint_path_, pts);
+            std::vector<std::pair<int, int>> asso_epid_frameid;
+            IO::ReadPublicPointAssociation(associate_path_, asso_epid_frameid);
+
+            for (auto pt : pts)
+            {
+                int id = pt.first;
+                simulator::EnvPoint *ptr_ep = new simulator::EnvPoint(id, ptr_robot_trajectory_); // MapPoint(id, ptr_robot_trajectory_);
+                ptr_ep->GenerateEnvPoint(pt.second);
+                std::cout << "pt:" << asso_epid_frameid.size() << std::endl;
+                ptr_ep->AddObservation(ptr_robot_trajectory_->groundtruth_traject_id_Twc_, asso_epid_frameid, b_add_noise_to_meas);
                 for (auto ob = ptr_ep->obs_frame_pos_.begin(), ob_end = ptr_ep->obs_frame_pos_.end(); ob != ob_end; ob++)
                 {
                     int frame_id = ob->first;
