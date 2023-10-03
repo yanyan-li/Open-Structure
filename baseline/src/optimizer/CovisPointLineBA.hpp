@@ -91,7 +91,7 @@ namespace simulator
                     LinePLK << d * LinePlaneNormal, LineDirection;
                     // from plk to orth
                     Eigen::Vector4d LineOrth = UtiliLine::plk_to_orth(LinePLK);
-#if __VERBOSE__
+#if __VERBOSE__OFF
                     // check plk_to_orth  and  orth_to_plk
                     // maplines: 26.3424, 7.98188, 3.30027, 0.957031, 0.289986,3.30027, 27.5251, 27.5251
                     Eigen::Matrix<double, 6, 1> opti_ml_endpoints = UtiliLine::orth_to_plk(LineOrth);
@@ -195,7 +195,9 @@ namespace simulator
                 // slove ceres problem
                 ceres::Solver::Options options;
                 options.linear_solver_type = ceres::SPARSE_SCHUR;
+                options.max_num_iterations = 15;
                 options.minimizer_progress_to_stdout = true;
+                // options.max_num_iterations = 5;
                 ceres::Solver::Summary summary;
                 ceres::Solve(options, &problem, &summary);
 #if __VERBOSE__

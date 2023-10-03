@@ -356,7 +356,7 @@ Eigen::Vector2d residual_from_paraline_pose(const Eigen::Matrix3d &Rwc,
   Eigen::Vector3d nc = line_c.head(3);
   double l_norm = nc(0) * nc(0) + nc(1) * nc(1);
   double l_sqrtnorm = sqrt(l_norm);
-  double l_trinorm = l_norm * l_sqrtnorm;
+  // double l_trinorm = l_norm * l_sqrtnorm;
 
   double e1 = obs_i(0) * nc(0) + obs_i(1) * nc(1) + nc(2);
   double e2 = obs_i(2) * nc(0) + obs_i(3) * nc(1) + nc(2);
@@ -596,7 +596,7 @@ double residual_from_paraline_rotation(const Eigen::Matrix3d &Rwc,
                                        const Eigen::Vector4d &obs_i)
 {
 
-  Eigen::Vector3d LinePlaneNormal = plk.head(3).normalized();
+  // Eigen::Vector3d LinePlaneNormal = plk.head(3).normalized();
   Eigen::Vector3d LineDirection = plk.tail(3).normalized();
 
   double direction_move0 = line_d_move(0);

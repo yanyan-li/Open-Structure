@@ -15,14 +15,13 @@
 #include <Eigen/Dense>
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
-#include <ctime>
 #include <fstream>
 #include <iostream>
 #include <istream>
 #include <string>
 #include <vector>
 
-#include "gtest/gtest.h"
+// #include "gtest/gtest.h"
 #include "src/utils/UtilStruct.hpp"
 
 namespace simulator
@@ -230,42 +229,71 @@ namespace simulator
     
     void ReadPublicTraj(const std::string &traj_path,  std::vector<Eigen::Matrix4d> &vec_traject_gt_Twc) //,  std::vector<Eigen::Matrix4d> &vec_traj)
     {
-      std::ifstream file(traj_path);
-      std::string line;
-      while (std::getline(file, line))
-      {
-        std::vector<std::string> words;
-        boost::split(words, line, boost::is_any_of(" "), boost::token_compress_on);
-        // std::cout<<words[0]<<std::endl;
-        Eigen::Vector3d trans = Eigen::Vector3d::Zero();
-        Eigen::Quaterniond rot;
-        double v_index = boost::lexical_cast<double>(words[0]);
-        // std::cout<<v_index<<std::endl;
-        trans.x() = boost::lexical_cast<double>(words[1]);
-        trans.y() = boost::lexical_cast<double>(words[2]);
-        trans.z() = boost::lexical_cast<double>(words[3]);
+        std::cout << std::endl 
+                << "\033[0;33m[Venom Simulator Printer] Read trajectory from " << traj_path << ".\033[0m" << std::endl;
+        std::ifstream file(traj_path);
+        std::string line;
+        while (std::getline(file, line))
+        {
+            std::vector<std::string> words;
+            boost::split(words, line, boost::is_any_of(" "), boost::token_compress_on);
+            //std::cout<<words[0]<<std::endl;
+            Eigen::Vector3d trans = Eigen::Vector3d::Zero();
+            Eigen::Quaterniond rot;
+            double v_index = boost::lexical_cast<double>(words[0]);
+            //std::cout<<v_index<<std::endl;
+            trans.x() = boost::lexical_cast<double>(words[1]);
+            trans.y() = boost::lexical_cast<double>(words[2]);
+            trans.z() = boost::lexical_cast<double>(words[3]);
 
-        rot.x() = boost::lexical_cast<double>(words[4]);
-        rot.y() = boost::lexical_cast<double>(words[5]);
-        rot.z() = boost::lexical_cast<double>(words[6]);
-        rot.w() = boost::lexical_cast<double>(words[7]);
+            rot.x() = boost::lexical_cast<double>(words[4]);
+            rot.y() = boost::lexical_cast<double>(words[5]);
+            rot.z() = boost::lexical_cast<double>(words[6]);
+            rot.w() = boost::lexical_cast<double>(words[7]);
+            
+            Eigen::Matrix4d pose(Eigen::Matrix4d::Identity());
+            Eigen::Matrix3d R = Eigen::Quaterniond(rot.w(), rot.x(), rot.y(), rot.z()).toRotationMatrix();
+            pose.template block<3, 3>(0, 0) = R;
+            pose.template block<3, 1>(0, 3) = trans;
 
-        Eigen::Matrix4d pose(Eigen::Matrix4d::Identity());
-        Eigen::Matrix3d R = Eigen::Quaterniond(rot.w(), rot.x(), rot.y(), rot.z()).toRotationMatrix();
-        pose.template block<3, 3>(0, 0) = R;
-        pose.template block<3, 1>(0, 3) = trans;
-
-        vec_traject_gt_Twc.push_back(pose);
-      }
-      // std::cout<<"vec_traject_gt_Twc:"<<vec_traject_gt_Twc.size()<<std::endl;
-      file.close();
+            vec_traject_gt_Twc.push_back(pose);
+        }
+        // std::cout<<"vec_traject_gt_Twc:"<<vec_traject_gt_Twc.size()<<std::endl;
+        file.close();
     }
-
+ 
     /**
      * @brief Read points
      * 
      * @param filename 
      * @param pts 
+     */
+    void ReadPublicPointClouds(const std::string &filename, std::vector<Eigen::Vector3d> &pts)
+    {
+      std::cout << std::endl 
+                << "\033[0;33m[Venom Simulator Printer] Read Point Landmarks from " << filename << ".\033[0m" << std::endl;
+            
+      std::ifstream file(filename);
+      std::string line;
+      while (std::getline(file, line))
+      {
+        std::vector<std::string> words;
+        boost::split(words, line, boost::is_any_of(" "), boost::token_compress_on);
+        //std::cout<<words[0]<<std::endl;
+        Eigen::Vector3d pt = Eigen::Vector3d::Zero();
+        pt.x() = boost::lexical_cast<double>(words[0]);
+        pt.y() = boost::lexical_cast<double>(words[1]);
+        pt.z() = boost::lexical_cast<double>(words[2]);
+        pts.push_back(pt);
+      }
+      file.close();
+    }
+
+    /**
+     * @brief Read points
+     *
+     * @param filename
+     * @param pts
      */
     void ReadPublicPointClouds(const std::string &filename, std::vector<std::pair<int, Eigen::Vector3d>> &pts)
     {
@@ -282,26 +310,8 @@ namespace simulator
         pt.x() = boost::lexical_cast<double>(words[1]);
         pt.y() = boost::lexical_cast<double>(words[2]);
         pt.z() = boost::lexical_cast<double>(words[3]);
+        // std::cout << "pt.x()" << pt.x() << pt.y() << std::endl;
         pts.push_back(std::make_pair(mp_id, pt));
-      }
-      file.close();
-    }
-
-    void ReadPublicPointClouds(const std::string &filename, std::vector<Eigen::Vector3d> &pts)
-    {
-      std::ifstream file(filename);
-      std::string line;
-      while (std::getline(file, line))
-      {
-        std::vector<std::string> words;
-        boost::split(words, line, boost::is_any_of(" "), boost::token_compress_on);
-        //std::cout<<words[0]<<std::endl;
-        Eigen::Vector3d pt = Eigen::Vector3d::Zero();
-
-        pt.x() = boost::lexical_cast<double>(words[0]);
-        pt.y() = boost::lexical_cast<double>(words[1]);
-        pt.z() = boost::lexical_cast<double>(words[2]);
-        pts.push_back(pt);
       }
       file.close();
     }
@@ -314,14 +324,17 @@ namespace simulator
      */
     void ReadPublicLineClouds(const std::string &filename, std::vector<Eigen::Matrix<double,7,1>> &paralines)
     {
+      std::cout << std::endl 
+                << "\033[0;33m[Venom Simulator Printer] Read Line Landmarks from " << filename << ".\033[0m" << std::endl;
+
       std::ifstream file(filename);
       std::string line;
       while (std::getline(file, line))
       {
         std::vector<std::string> words;
         boost::split(words, line, boost::is_any_of(" "), boost::token_compress_on);
-        // std::cout<<words[0]<<std::endl;
-        Eigen::Matrix<double, 7, 1> paraline = Eigen::Matrix<double, 7, 1>::Zero();
+                //std::cout<<words[0]<<std::endl;
+        Eigen::Matrix<double,7,1> paraline = Eigen::Matrix<double,7,1>::Zero();
         paraline(0) = boost::lexical_cast<double>(words[0]);
         paraline(1) = boost::lexical_cast<double>(words[1]);
         paraline(2) = boost::lexical_cast<double>(words[2]);
@@ -343,41 +356,56 @@ namespace simulator
       {
         std::vector<std::string> words;
         boost::split(words, line, boost::is_any_of(" "), boost::token_compress_on);
-        // std::cout<<words[0]<<std::endl;
+        std::cout << words[0] << std::endl;
         std::map<int, int> asso_i;
-        if (words[0].compare("MaplineFrameAsso:") == 0)
+        if (words[0].compare("MappointFrameAsso:") == 0)
         {
           int point_id = boost::lexical_cast<double>(words[1]);
           int frame_id = boost::lexical_cast<double>(words[2]);
           double u = boost::lexical_cast<double>(words[3]);
           double v = boost::lexical_cast<double>(words[4]);
+          // TODO: Yanyan depth
+
           asso_ptid_frame_id.push_back(std::make_pair(point_id, frame_id));
         }
       }
       file.close();
     }
 
-    double uniform_rand(double lowerBndr, double upperBndr)
+    void ReadPublicLineAssociation(const std::string &filename,
+                                   std::vector<std::pair<int, Eigen::Matrix<double, 7, 1>>> &asso_plid_frame_id)
     {
-      return lowerBndr + ((double)std::rand() / (RAND_MAX + 1.0)) * (upperBndr - lowerBndr);
-    }
-
-    double gauss_rand(double mean, double sigma)
-    {
-      double x, y, r2;
-      do
+      std::ifstream file(filename);
+      std::string line;
+      while (std::getline(file, line))
       {
-        x = -1.0 + 2.0 * uniform_rand(0.0, 1.0);
-        y = -1.0 + 2.0 * uniform_rand(0.0, 1.0);
-        r2 = x * x + y * y;
-      } while (r2 > 1.0 || r2 == 0.0);
-      return mean + sigma * y * std::sqrt(-2.0 * log(r2) / r2);
+        std::vector<std::string> words;
+        boost::split(words, line, boost::is_any_of(" "), boost::token_compress_on);
+        std::cout << words[0] << std::endl;
+        std::map<int, int> asso_i;
+        if (words[0].compare("MaplineFrameAsso:") == 0)
+        {
+          Eigen::Matrix<double, 7, 1> observation;
+          int line_id = boost::lexical_cast<double>(words[1]);
+          double frame_id = boost::lexical_cast<double>(words[2]);
+          double u_s = boost::lexical_cast<double>(words[3]);
+          double v_s = boost::lexical_cast<double>(words[4]);
+          double d_s = boost::lexical_cast<double>(words[5]);
+          double u_e = boost::lexical_cast<double>(words[6]);
+          double v_e = boost::lexical_cast<double>(words[7]);
+          double d_e = boost::lexical_cast<double>(words[8]);
+          observation << frame_id, u_s, v_s, d_s, u_e, v_e, d_e;
+
+          // TODO: Yanyan depth
+
+          asso_plid_frame_id.push_back(std::make_pair(line_id, observation));
+        }
+      }
+      file.close();
     }
 
     void ReadVENOMFactorGraph(const std::string &file_name,
-                              simulator::OptimizationManager &paras,
-                              int noise_pose,
-                              int noise_points)
+                              simulator::OptimizationManager &paras)
     {
 
       std::fstream file;
@@ -394,9 +422,9 @@ namespace simulator
           Eigen::Quaterniond rot;
           int v_index = boost::lexical_cast<int>(words[1]);
 
-          trans.x() = boost::lexical_cast<double>(words[2]) + gauss_rand(0, noise_pose * 0.001);
-          trans.y() = boost::lexical_cast<double>(words[3]) + gauss_rand(0, noise_pose * 0.001);
-          trans.z() = boost::lexical_cast<double>(words[4]) + gauss_rand(0, noise_pose * 0.001);
+          trans.x() = boost::lexical_cast<double>(words[2]);
+          trans.y() = boost::lexical_cast<double>(words[3]);
+          trans.z() = boost::lexical_cast<double>(words[4]);
 
           rot.x() = boost::lexical_cast<double>(words[5]);
           rot.y() = boost::lexical_cast<double>(words[6]);
@@ -404,42 +432,36 @@ namespace simulator
           rot.w() = boost::lexical_cast<double>(words[8]);
           Eigen::Matrix4d pose(Eigen::Matrix4d::Identity());
           Eigen::Matrix3d R = Eigen::Quaterniond(rot.w(), rot.x(), rot.y(), rot.z()).toRotationMatrix();
-          Eigen::Vector3d eulerAngle = R.eulerAngles(2, 1, 0);
-          eulerAngle.x() += gauss_rand(0, noise_pose * 0.001);
-          eulerAngle.y() += gauss_rand(0, noise_pose * 0.001);
-          eulerAngle.z() += gauss_rand(0, noise_pose * 0.001);
-          Eigen::AngleAxisd rollAngle(Eigen::AngleAxisd(eulerAngle(2), Eigen::Vector3d::UnitX()));
-          Eigen::AngleAxisd pitchAngle(Eigen::AngleAxisd(eulerAngle(1), Eigen::Vector3d::UnitY()));
-          Eigen::AngleAxisd yawAngle(Eigen::AngleAxisd(eulerAngle(0), Eigen::Vector3d::UnitZ()));
-          Eigen::Matrix3d rotation_matrix;
-          rotation_matrix = yawAngle * pitchAngle * rollAngle;
-          pose.template block<3, 3>(0, 0) = rotation_matrix;
+          pose.template block<3, 3>(0, 0) = R;
           pose.template block<3, 1>(0, 3) = trans;
           paras.kfs[v_index] = pose;
+
+          // std::cout << "Vertex:" << v_index << std::endl;
         }
         else if (words[0].compare("Mappoint:") == 0)
         {
           int mp_id = boost::lexical_cast<int>(words[1]);
           Eigen::Vector3d pos = Eigen::Vector3d::Zero();
 
-          pos.x() = boost::lexical_cast<double>(words[2]) + gauss_rand(0, noise_points * 0.001);
-          pos.y() = boost::lexical_cast<double>(words[3]) + gauss_rand(0, noise_points * 0.001);
-          pos.z() = boost::lexical_cast<double>(words[4]) + gauss_rand(0, noise_points * 0.001);
+          pos.x() = boost::lexical_cast<double>(words[2]);
+          pos.y() = boost::lexical_cast<double>(words[3]);
+          pos.z() = boost::lexical_cast<double>(words[4]);
           paras.mappoints[mp_id] = pos;
+          // std::cout << "mp_id:" << mp_id << std::endl;
         }
         else if (words[0].compare("Mapline:") == 0)
         {
           int ml_id = boost::lexical_cast<int>(words[1]);
           Eigen::Matrix<double, 3, 2> pos = Eigen::Matrix<double, 3, 2>::Zero();
 
-          pos(0, 0) = boost::lexical_cast<double>(words[2]) + gauss_rand(0, noise_points * 0.001);
-          pos(1, 0) = boost::lexical_cast<double>(words[3]) + gauss_rand(0, noise_points * 0.001);
-          pos(2, 0) = boost::lexical_cast<double>(words[4]) + gauss_rand(0, noise_points * 0.001);
-          pos(0, 1) = boost::lexical_cast<double>(words[5]) + gauss_rand(0, noise_points * 0.001);
-          pos(1, 1) = boost::lexical_cast<double>(words[6]) + gauss_rand(0, noise_points * 0.001);
-          pos(2, 1) = boost::lexical_cast<double>(words[7]) + gauss_rand(0, noise_points * 0.001);
+          pos(0, 0) = boost::lexical_cast<double>(words[2]);
+          pos(1, 0) = boost::lexical_cast<double>(words[3]);
+          pos(2, 0) = boost::lexical_cast<double>(words[4]);
+          pos(0, 1) = boost::lexical_cast<double>(words[5]);
+          pos(1, 1) = boost::lexical_cast<double>(words[6]);
+          pos(2, 1) = boost::lexical_cast<double>(words[7]);
           paras.maplines[ml_id] = pos;
-
+          // std::cout << "ml_id:" << ml_id << std::endl;
         }
         else if (words[0].compare("MappointFrameAsso:") == 0)
         {
@@ -452,8 +474,7 @@ namespace simulator
           feature.x() = boost::lexical_cast<double>(words[3]);
           feature.y() = boost::lexical_cast<double>(words[4]);
           paras.asso_mp_meas[mp_id].push_back(std::make_pair(kf_id, feature));
-          // std::cout<<"dagas"<<std::endl;
-
+          // std::cout << "mp_id" << mp_id << "," << kf_id << std::endl;
         }
         else if (words[0].compare("MaplineFrameAsso:") == 0)
         {
@@ -863,11 +884,13 @@ namespace simulator
                      << trans(1) << " " << trans(2) << " " << quat.x() << " "
                      << quat.y() << " " << quat.z() << " " << quat.w()
                      << std::endl;
+                // std::cout << "kf_id:" << kf_id << std::endl;
             }
             for(auto &mappoint : opti_para.mappoints)
             {
                 int mp_id = mappoint.first;
-                file<< "Mappoint: "<< mp_id<< " " << mappoint.second.x() << " "<<mappoint.second.y()<< " "<<mappoint.second.z()<<std::endl; 
+                file << "Mappoint: " << mp_id << " " << mappoint.second.x() << " " << mappoint.second.y() << " " << mappoint.second.z() << std::endl;
+                // std::cout << "mp_id:" << mp_id << std::endl;
             }
             for (auto &mapline : opti_para.maplines) {
                 int ml_id = mapline.first;

@@ -1,5 +1,11 @@
-
-
+/*
+ * @Author: yanyan-li yanyan.li.camp@gmail.com
+ * @Date: 2023-09-30 06:55:26
+ * @LastEditTime: 2023-09-30 10:23:38
+ * @LastEditors: yanyan-li yanyan.li.camp@gmail.com
+ * @Description:
+ * @FilePath: /baseline/src/optimizer/factor/PoseGraphSO3Factor.cc
+ */
 
 /*** 
  * @Author: liyanyan liyanyan@meta-bounds.com
@@ -42,10 +48,10 @@ namespace simulator{
                     Eigen::Map<const Eigen::Quaternion<T>> q_b(q_b_ptr);
 
                     // Compute the relative T
-                    Eigen::Quaternion<T> q_a_inverse = q_a.conjugate();
-                    // Eigen::Quaternion<T> q_ab_estimated = 
+                    // Eigen::Quaternion<T> q_a_inverse = q_a.conjugate();
+                    // Eigen::Quaternion<T> q_ab_estimated =
                     //     calib*q_a.conjugate() * q_b*calib.conjugate();
-                    
+
                     Eigen::Quaternion<T> q_ab_estimated = 
                         q_a.conjugate() * q_b;
 

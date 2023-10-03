@@ -8,16 +8,8 @@
  */
 #ifndef __VENOM_SRC_VISUALIZER_INTERFACE_HPP__
 #define __VENOM_SRC_VISUALIZER_INTERFACE_HPP__
-
-#include "src/estimator/Track.hpp"
-#include "src/manager_env/EnvManager.hpp"
-#include "src/manager_env/EnvTrajectory.hpp"
-#include "src/map/MapLine.hpp"
-#include "src/map/MapPoint.hpp"
 #include <eigen3/Eigen/Dense>
 #include <experimental/filesystem>
-#include <mutex>
-#include <omp.h>
 #include <opencv2/core/persistence.hpp>
 #include <pangolin/display/default_font.h>
 #include <pangolin/display/display.h>
@@ -27,17 +19,23 @@
 #include <pangolin/var/var.h>
 #include <pangolin/var/varextra.h>
 #include <string>
+#include <sys/stat.h>
 #include <vector>
 
+#include "src/estimator/Track.hpp"
+#include "src/manager_env/EnvManager.hpp"
+#include "src/manager_env/EnvTrajectory.hpp"
+#include "src/map/MapLine.hpp"
+#include "src/map/MapPoint.hpp"
+
+#include "src/optimizer/CovisExtensPointParalineBA.hpp"
 #include "src/optimizer/CovisPointBA.hpp"
 #include "src/optimizer/CovisPointLineBA.hpp"
-#include "src/optimizer/PoseGraphOptimization.hpp"
 #include "src/optimizer/CovisPointParalineBA.hpp"
-#include "src/optimizer/CovisExtensPointParalineBA.hpp"
+#include "src/optimizer/PoseGraphOptimization.hpp"
 
 #include "src/utils/IOFuntion.hpp"
 #include "src/utils/UtilStruct.hpp"
-
 namespace simulator
 {
     class Interface
@@ -87,6 +85,13 @@ namespace simulator
         std::string root_path_;
         std::vector<Vec3> points_gt;
         std::vector<Mat32> lines_gt;
+
+        Eigen::Vector3d color_initial_;
+        std::vector<Vec3> points_initial_;
+
+        Eigen::Vector3d color_pl_initial_;
+        std::vector<Mat32> lines_intial_;
+
         pangolin::OpenGlRenderState s_cam;
         pangolin::View d_cam;
         int UI_WIDTH;
@@ -94,7 +99,7 @@ namespace simulator
     public:
         Interface(const std::string &version)
         {
-            std::string window_title = "Open Structure SLAM Baseline. @" + version;
+            std::string window_title = "VENOM SLAM SIMULATOR. @" + version;
             pangolin::CreateWindowAndBind(window_title, 1024, 768);
             // 3D Mouse handler requires depth testing to be enabled
             glEnable(GL_DEPTH_TEST);
@@ -121,17 +126,17 @@ namespace simulator
                 std::cerr << "\033[0;35m[Venom Similator Printer]Failed to open settings file at:\033[0m"
                           << str_settings << std::endl;
             // home page
-            PageHomeSurface(venom_settings, str_settings);
+            PageHomeSurface(venom_settings);
         }
 
-        void PageHomeSurface(cv::FileStorage &venom_settings, const std::string &str_settings)
+        void PageHomeSurface(cv::FileStorage &venom_settings)
         {
             venom_settings["Evaluation.result_path"] >> root_path_;
             if (mkdir(root_path_.c_str(), 0777) == -1)
                 std::cerr << "Error :  " << strerror(errno) << std::endl;
             else
                 std::cout << "Directory created";
-            
+
             pangolin::CreatePanel("homemenu").SetBounds(0.0, 1.0, 0.0, pangolin::Attach::Pix(UI_WIDTH));
             // background color
             pangolin::Var<int> menuWhite("homemenu.BG-Color Perferences", 10, 0, 10);
@@ -150,8 +155,6 @@ namespace simulator
                 else
                     glClearColor(0.1 * menuWhite, 0.1 * menuWhite, 0.1 * menuWhite, 0.1 * menuWhite);
 
-                DrawCoordiante();
-
                 if (menuUsePublicFactorGraph)
                     wait_click = 1;
                 else if (menuUsePrivateEnv)
@@ -161,18 +164,14 @@ namespace simulator
             if (wait_click == 1)
                 StartPublicPipeline(venom_settings);  // page for dealing with venom_sequence.txt
             else if (wait_click == 2)
-                PageStartPrivatePipeline(venom_settings, str_settings); // page for dealing with new environments
+                PageStartPrivatePipeline(venom_settings); // page for dealing with new environments
         }
 
         // Page------------------> Public Dataset
         void StartPublicPipeline(cv::FileStorage &venom_settings)
         {
             pangolin::CreatePanel("publicmenu").SetBounds(0.0, 1.0, 0.0, pangolin::Attach::Pix(UI_WIDTH));
-             // public dataset: read g2o_file
-
-            pangolin::Var<int> set_optimization_MapPoints_noise("publicmenu.MapPoints Gaussian Noise (1e-1):", 0, 0, 100);
-            pangolin::Var<int> set_optimization_Pose_noise("publicmenu.Pose Gaussian Noise (1e-1):", 0, 0, 100);
-
+            // public dataset: read g2o_file
             pangolin::Var<std::string> menuInputPoseGraphFilePath("publicmenu.Path of g2o Pose Graph:", "");
             pangolin::Var<bool> menuStartInputPoseGraph("publicmenu.Input the Pose Graph", false, false);
 
@@ -204,12 +203,11 @@ namespace simulator
             bool click_input_pose_graph = true;
             bool click_reinput = true;
             bool click_input_factor_graph = true;
-            
-            bool click_input_data = true;  
+
+            bool click_input_data = true;
             bool click_start_optimize = true;
-            
-            bool click_show_connection = true;
-            bool bHaveTwcs_true = false;
+
+            // bool click_show_connection = true;
 
             std::map<int, Mat4> Twcs_factorgraph;
             std::vector<Mat4> Twcs_posegraph;
@@ -265,6 +263,7 @@ namespace simulator
                 }
                 else if(menuStartInputFactorGraph && click_input_factor_graph )
                 {
+                    //
                     menuInputPoseGraphFilePath.Detach();
                     menuStartInputPoseGraph.Detach();
                     prepare_optimization.Detach();
@@ -275,10 +274,7 @@ namespace simulator
                     Eigen::Vector4d graph_size;
 
                     // 1. existed check
-                    if (!DealWithVenomDataset(menuInputFactorGraphFilePath.Get().c_str(),
-                                              venom_factorgraph,
-                                              set_optimization_Pose_noise,
-                                              set_optimization_MapPoints_noise))
+                    if (!DealWithVenomDataset(menuInputFactorGraphFilePath.Get().c_str(), venom_factorgraph))
                     {
                         std::cout << " Load VENOM file failed. Please Check your path." << std::endl;
                         menuInputFactorGraphFilePath = " "; // clean the input path
@@ -319,14 +315,9 @@ namespace simulator
 
                 if (!click_input_factor_graph && click_start_optimize)
                 {
+
                     if (menuPointBACeres)
                     {
-                        if (set_optimization_MapPoints_noise || set_optimization_Pose_noise)
-                        {
-                            // Save
-                            IO::SaveFramePredictedTrajectoryLovelyTUM(root_path_ + "Nosie_Point_BA.txt", venom_factorgraph.kfs);
-                            IO::MapPointRecord(root_path_ + "Noise_Point_Mappoint.txt", venom_factorgraph.mappoints);
-                        }
                         simulator::optimizer::CovisPointBA::optimizer(ptr_robot_trajectory_,
                                                                                          venom_factorgraph,
                                                                                          optimized_mappoints_,
@@ -349,18 +340,12 @@ namespace simulator
                     }
                     else if (menuPointLineBA)
                     {
-                        if (set_optimization_MapPoints_noise || set_optimization_Pose_noise)
-                        {
-                            // Save
-                            IO::SaveFramePredictedTrajectoryLovelyTUM(root_path_ + "Nosie_Point_BA.txt", venom_factorgraph.kfs);
-                            IO::MapPointRecord(root_path_ + "Noise_Point_Mappoint.txt", venom_factorgraph.mappoints);
-                            IO::MapLineRecord(root_path_ + "Noise_PointLine_mapline.txt", venom_factorgraph.maplines);
-                        }
+
                         simulator::optimizer::CovisPointLineBA::optimizer(ptr_robot_trajectory_,
-                                                                                        venom_factorgraph,
-                                                                                        optimized_mappoints_,
-                                                                                        optimized_maplines_,
-                                                                                        Twcs_factorgraph);
+                                                                          venom_factorgraph,
+                                                                          optimized_mappoints_,
+                                                                          optimized_maplines_,
+                                                                          Twcs_factorgraph);
                         menuShowPoseGraphTrajectory = true;
                         // menuShowOptimizedMapPoints = true;
                         // menuShowOptimizedMapLines = true;
@@ -380,6 +365,7 @@ namespace simulator
                     }
                     else if (menuPointLineBACE)
                     {
+
                         simulator::optimizer::CovisPointParalineBA::optimizer(ptr_robot_trajectory_,
                                                                                         venom_factorgraph,
                                                                                         optimized_mappoints_,
@@ -435,28 +421,27 @@ namespace simulator
                     
                     std::vector<pangolin::OpenGlMatrix> MsTrue;
                     DrawTrajectoryConnection(MsTrue, Twcs_posegraph, Vec3(0,1,1));
-                    DrawTrajectoryCamera(MsTrue,Vec3(0,0,1));
-
+                    // DrawTrajectoryCamera(MsTrue,Vec3(0,0,1));
                 }
 
                 if (menuShowTrajectory)
                 {
                     std::vector<pangolin::OpenGlMatrix> MsTrue;
-                    if (!click_input_factor_graph && !bHaveTwcs_true)
+                    if (!click_input_factor_graph)
                     {
                         for (auto &mit : venom_factorgraph.kfs)
                             Twcs_true_.push_back(mit.second);
                     }
 
                     DrawTrajectoryConnection(MsTrue, Twcs_true_, Vec3(0.8, 0.1, 0.1));
-                    DrawTrajectoryCamera(MsTrue, Vec3(0,0,1));
+                    // DrawTrajectoryCamera(MsTrue, Vec3(0,0,1));
                 }
 
                 if (menuShowConnections)
                 {
                     //TODO: 这个要和 优化前 还是 后的pose 绑定
                     DrawTrajectoryConnection(vertex_connections_);
-                    click_show_connection = false;
+                    // click_show_connection = false;
                 }
                 pangolin::FinishFrame();    
             }
@@ -507,7 +492,7 @@ namespace simulator
         }
 
         bool DealWithVenomDataset(const std::string &path_venomfile,
-                                  simulator::OptimizationManager &factorgraph, int noise_poses, int noise_points)
+                                  simulator::OptimizationManager &factorgraph)
         {
             std::cout << "path:" << path_venomfile << std::endl;
             std::cout << std::endl
@@ -517,7 +502,7 @@ namespace simulator
 
             
             // tested
-            IO::ReadVENOMFactorGraph(path_venomfile, factorgraph, noise_poses, noise_points);
+            IO::ReadVENOMFactorGraph(path_venomfile, factorgraph);
             // poses, map_points,  map_lines, map_paralines, asso_mappoints, asso_maplines);
             std::cout<<"read a venom sequence..."<<std::endl;
 
@@ -526,31 +511,26 @@ namespace simulator
         }
 
         // Page-----------------> Private Pipeline
-        void PageStartPrivatePipeline(cv::FileStorage &venom_settings, const std::string &str_settings)
+        void PageStartPrivatePipeline(cv::FileStorage &venom_settings)
         {
             pangolin::CreatePanel("privatemenu").SetBounds(0.0, 1.0, 0.0, pangolin::Attach::Pix(UI_WIDTH));
-
-            // String Notice
-            std::string::size_type iPos = (str_settings.find_last_of('\\') + 1) == 0 ? str_settings.find_last_of('/') + 1 : str_settings.find_last_of('\\') + 1;
-            std::string file_name = str_settings.substr(iPos, str_settings.length() - iPos);
-            pangolin::Var<std::string> notice_param("privatemenu.Filename of your settings:", file_name);
-
-            pangolin::Var<int> traject_num("privatemenu.KeyFrame Number", 100, 50, 4000);
+            pangolin::Var<int> traject_num("privatemenu.Frame Number", 100, 50, 4000);
             // pangolin::Var<std::string> intro_traject_type("privatemenu.0->Circle;1->Sphere;2->Corridor.", " ");
-            pangolin::Var<int> traject_type("privatemenu.0:Circle;  1:Sphere;  2:Corrid;", 0, 0, 2);
-            pangolin::Var<int> vert_points("privatemenu.Vertical Points", 260, 4, 5000);
-            pangolin::Var<int> horiz_points("privatemenu.Horizontal Points", 10, 0, 20);
-            pangolin::Var<int> vert_lines("privatemenu.Vertical Lines", 20, 4, 50);
-            pangolin::Var<int> horiz_lines("privatemenu.Horizontal Lines", 10, 0, 50);
-
-            // Decide Button
+            pangolin::Var<int> traject_type("privatemenu.Traj: 0:Circle;1:Sphere;2:Corrid;", 0, 0, 2);
+            pangolin::Var<int> vert_points("privatemenu.Point Landmarks", 260, 4, 5000);
+            // pangolin::Var<int> horiz_points("privatemenu.Horizontal Points", 10, 0, 20);
+            pangolin::Var<int> vert_lines("privatemenu.Line Landmarks", 20, 4, 50);
+            // pangolin::Var<int> horiz_lines("privatemenu.Horizontal Lines", 10, 0, 50);
             pangolin::Var<bool> set_env("privatemenu.Decide Settings", false, false);
 
-            pangolin::Var<std::string> set_traject_type("privatemenu.Selected Trajectory Type:", " ");
             // Show user settings
+            pangolin::Var<std::string> set_traject_type("privatemenu.Selected Trajectory Type:", " ");
             pangolin::Var<int> set_traject_num("privatemenu.Num of KeyFrames:", 0);
-            // pangolin::Var<int> set_points("privatemenu.Num of Point Landmarks:", 0);
-            // pangolin::Var<int> set_lines("privatemenu.Num of Line Landmarks:", 0);
+
+            // pangolin::Var<int> set_vert_points("privatemenu.Num of Vertical Points:", 0);
+            // pangolin::Var<int> set_horiz_points("privatemenu.Num of Horizontal Points:", 0);
+            // pangolin::Var<int> set_vert_lines("privatemenu.Num of Vertical Lines:", 0);
+            // pangolin::Var<int> set_horiz_lines("privatemenu.Num of Horizontal Lines:", 0);
 
             pangolin::Var<int> set_vert_points("privatemenu.Num of Point Landmarks:", 0);
             // pangolin::Var<int> set_horiz_points("privatemenu.Num of Horizontal Points:", 0);
@@ -561,11 +541,11 @@ namespace simulator
             int set_horiz_lines;
 
             // Build System
-            pangolin::Var<bool> start_traject_env("privatemenu.Show gt_trajectory & gt_landmarks", false, false);
+            pangolin::Var<bool> start_traject_env("privatemenu.Show Cameras & Environment", false, false);
             // show
             pangolin::Var<bool> menuShowTrajectory("privatemenu.Groundruth Trajectory", false, true);
-            pangolin::Var<bool> menuShowPoint("privatemenu.Groundtruth Point Landmarks", false, true);
-            pangolin::Var<bool> menuShowLine("privatemenu.Groundtruth Line Landmarks", false, true);
+            pangolin::Var<bool> menuShowPoint("privatemenu.Groundtruth Point", false, true);
+            pangolin::Var<bool> menuShowLine("privatemenu.Groundtruth Line", false, true);
 
             // record it as a sequence
             // pangolin::Var<bool> menuSave("privatemenu.Record This Sequence", false, false);
@@ -587,12 +567,10 @@ namespace simulator
                     traject_num.Detach();
                     traject_type.Detach();
                     vert_points.Detach();
-                    horiz_points.Detach();
+                    // horiz_points.Detach();
                     vert_lines.Detach();
-                    horiz_lines.Detach();
-                    int public_type;
-                    venom_settings["Env.Public.type"] >> public_type;
-                    traject_type = public_type;
+                    // horiz_lines.Detach();
+                    traject_type = 9;
                 }
                 
                 if (set_env && click_build_env)
@@ -601,19 +579,13 @@ namespace simulator
                     // show env parameters
                     set_traject_num = traject_num;
                     if (traject_type == 0)
-                        set_traject_type = "              Cycle               ";
+                        set_traject_type = "Cycle";
                     else if (traject_type == 1)
-                        set_traject_type = "             Sphere               ";
+                        set_traject_type = "Sphere";
                     else if (traject_type == 2)
-                        set_traject_type = "            Corridor              ";
-                    else if (traject_type == 6)
-                        set_traject_type = "        CMU-Tartanair Dataset     ";
-                    else if (traject_type == 7)
-                        set_traject_type = "           ICL-NUIM Dataset       ";
-                    else if (traject_type == 8)
-                        set_traject_type = "           TUM Dataset            ";
+                        set_traject_type = "Corridor";
                     else if (traject_type == 9)
-                        set_traject_type = "         OpenStructure Dataset           ";
+                        set_traject_type = "OpenStructure Dataset";
 
                     // get size parameters of the env
                     if(click_read_public)  // set parameters of public datasets
@@ -621,32 +593,23 @@ namespace simulator
                         std::string envpoint_path;
                         std::vector<Eigen::Vector3d> pts_t;
                         venom_settings["Env.Public.envpoint_path"] >> envpoint_path;
-
-                        std::cout << std::endl
-                                  << "\033[0;33m[Venom Simulator Printer] Read Point Landmarks from " << envpoint_path << ".\033[0m" << std::endl;
-                        IO::ReadPublicPointClouds(envpoint_path, pts_t); 
+                        IO::ReadPublicPointClouds(envpoint_path, pts_t);
                         set_vert_points = pts_t.size();
                         set_horiz_points = 0;
 
                         std::string envline_path;
                         std::vector<Eigen::Matrix<double, 7, 1>> paralines_t;
                         venom_settings["Env.Public.envline_path"] >> envline_path;
-
-                        std::cout << std::endl
-                                  << "\033[0;33m[Venom Simulator Printer] Read Line Landmarks from " << envline_path << ".\033[0m" << std::endl;
                         IO::ReadPublicLineClouds(envline_path, paralines_t);
                         set_vert_lines = paralines_t.size();
                         set_horiz_lines = 0;
-                        
+
                         std::string traj_path;
                         std::vector<Eigen::Matrix4d> vec_traject_gt_Twc_t;
                         venom_settings["Env.Public.envtraj_path"] >> traj_path;
-
-                        std::cout << std::endl
-                                  << "\033[0;33m[Venom Simulator Printer] Read trajectory from " << traj_path << ".\033[0m" << std::endl;
                         IO::ReadPublicTraj(traj_path, vec_traject_gt_Twc_t);
                         set_traject_num = vec_traject_gt_Twc_t.size();
-                        
+
                         pts_t.clear();
                         paralines_t.clear();
                         vec_traject_gt_Twc_t.clear();
@@ -654,9 +617,9 @@ namespace simulator
                     else
                     {
                         set_vert_points = vert_points;
-                        set_horiz_points = horiz_points;
+                        set_horiz_points = 0;
                         set_vert_lines = vert_lines;
-                        set_horiz_lines = horiz_lines;
+                        set_horiz_lines = 0;
                     }
                     std::cout << std::endl
                               << "\033[0;35m[Venom Similator Printer] The settings was constructed. \033[0m"
@@ -673,10 +636,9 @@ namespace simulator
                     traject_num.Detach();
                     traject_type.Detach();
                     vert_points.Detach();
-                    horiz_points.Detach();
+                    // horiz_points.Detach();
                     vert_lines.Detach();
-                    horiz_lines.Detach();
-                    notice_param.Detach();
+                    // horiz_lines.Detach();
                     set_env.Detach();
                 }
 
@@ -732,8 +694,7 @@ namespace simulator
                         ptr_env_manager_->ptr_robot_trajectory_);
 
                     click_start_track = false;
-                    ptr_tracker_->SaveFrameGTTrajectoryLovelyTUM(root_path_+"ground_truth.txt");
-
+                    ptr_tracker_->SaveFrameGTTrajectoryLovelyTUM(root_path_ + "ground_truth.txt");
                     std::vector<std::pair<int, Vec3>> vec_epid_pos_w;
                     vec_epid_pos_w.clear();
                     std::vector<std::pair<int, Mat32>> vec_elid_pos_w; // TODO: NULL
@@ -766,37 +727,33 @@ namespace simulator
             pangolin::Var<bool> menuShowLine("trackmenu.Groudtruth Line", false, true);
             // ----------------------> Covisibility
             // tracking and mapping
-            pangolin::Var<int> menuPlayingSpeed("trackmenu.playing speed", 1, 1, 50);
-
-            pangolin::Var<bool> menuVisualOdometryPoint("trackmenu.P: T&M via VO", false, false);
-            pangolin::Var<bool> menuLocalMapPoint("trackmenu.P: T&M via VO and LocalMap", false, false);
-            pangolin::Var<bool> menuVisualOdometryPointLine("trackmenu.PL: T&M via VO", false, false);
-            pangolin::Var<bool> menuLocalMapPointLine("trackmenu.PL: T&M via VO and LocalMap", false, false);
+            pangolin::Var<bool> menuLocalMapPointLine("trackmenu.Initial Pose Estimation and Recon.", false, false);
             // initial pose and landmarks
-
-            pangolin::Var<bool> menuShowInitialPoses("trackmenu.Initial Poses", false, true);
-            pangolin::Var<bool> menuShowInitialMapPoints("trackmenu.Initial MapPoints", false, true);
-            pangolin::Var<bool> menuShowInitialMapLines("trackmenu.Initial MapLines", false, true);
-
+            pangolin::Var<bool> menuShowInitialPoses("trackmenu.Initial Poses", true, true);
+            pangolin::Var<bool> menuShowInitialMapPoints("trackmenu.Initial MapPoints", true, true);
+            pangolin::Var<bool> menuShowInitialMapLines("trackmenu.Initial MapLines", true, true);
             pangolin::Var<bool> start_ba("trackmenu.Optimization Preparation", false, false);
             // optimization
             // pangolin::Var<bool> menuPointBAGTSAM("trackmenu.CovisPointBA GTSAM", false, false);
             pangolin::Var<bool> menuPointBACeres("trackmenu.CovisPointBA", false, false);
             pangolin::Var<bool> menuPointLineBA("trackmenu.CovisPointLineBA", false, false);
-            pangolin::Var<bool> menuPointLineBACE("trackmenu.CovisExtensImpliPointLineBA", false, false);
-            pangolin::Var<bool> menuPointLineBACEEx("trackmenu.CovisExtensExpliPointLineBA", false, false);
-
+            // pangolin::Var<bool> menuPointLineBACE("trackmenu.CovisExtensImpliPointLineBA", false, false);
+            // pangolin::Var<bool> menuPointLineBACEEx("trackmenu.CovisExtensExpliPointLineBA", false, false);
             // refined pose and landmarks
             pangolin::Var<bool> menuShowOptimizedPoses("trackmenu.Optimized Poses", false, true);
             pangolin::Var<bool> menuShowOptimizedMapPoints("trackmenu.Optimized MapPoints", false, true);
             pangolin::Var<bool> menuShowOptimizedMapLines("trackmenu.Optimized MapLines", false, true);
 
             bool click_start_vo = true;
+            bool click_get_initial_pose = true;
             bool click_start_opti = true;
             bool click_do_opti = true;
 
             std::map<int, Eigen::Matrix4d> Twcs_factorgraph;
             std::vector<Eigen::Matrix4d> optimized_poses;
+            std::vector<Mat32> lines;
+            std::vector<Vec3> points;
+
             std::vector<Eigen::Matrix4d> initial_poses;
             while (!pangolin::ShouldQuit())
             {
@@ -808,8 +765,6 @@ namespace simulator
                     if (menuShowTrajectory)
                     {
                         std::vector<pangolin::OpenGlMatrix> MsTrue;
-                        // DrawTrajectoryConnection(MsTrue, Twcs_true_, Vec3(1, 0, 1));
-                        // DrawTrajectoryCamera(MsTrue);
                         Eigen::Vector3d gt_color(1.0, 0.0, 0.0);
                         if (Twcs_true_.size())
                         {
@@ -829,81 +784,21 @@ namespace simulator
                     }
                 }
 
-                ptr_tracker_->mTrackSpeed = menuPlayingSpeed;
                 if (click_start_vo)
                 {
-                    if (menuVisualOdometryPoint)
+                    if (menuLocalMapPointLine) // TODO: Check
                     {
-                        std::thread *ptr_thread_ptr_tracker_ = new std::thread(&Track::TrackOdometry, ptr_tracker_, root_path_, false, false);
-                        // ptr_tracker_->TrackOdometry(root_path_, false, false);
-                        menuVisualOdometryPoint = false;
-
-                        menuShowInitialMapPoints = true;
-                        menuShowInitialPoses = true;
-
-                        menuVisualOdometryPoint.Detach();
-                        menuLocalMapPoint.Detach();
-                        menuVisualOdometryPointLine.Detach();
-                        menuLocalMapPointLine.Detach();
-
-                        click_start_vo = false;
-                        // menuShowInitialMapLines = true;
-                    }
-                    else if (menuLocalMapPoint)
-                    {
-                        std::thread *ptr_thread_ptr_tracker_ = new std::thread(&Track::TrackOdometry, ptr_tracker_, root_path_, true, false);
-                        // ptr_tracker_->TrackOdometry(root_path_,true, false);
-                        menuLocalMapPoint = false;
-
-                        menuShowInitialMapPoints = true;
-                        menuShowInitialPoses = true;
-                        
-                        menuVisualOdometryPoint.Detach();
-                        menuLocalMapPoint.Detach();
-                        menuVisualOdometryPointLine.Detach();
-                        menuLocalMapPointLine.Detach();
-                        click_start_vo = false;
-                    }
-                    else if (menuVisualOdometryPointLine) // TODO: Check
-                    {
-                        std::thread *ptr_thread_ptr_tracker_ = new std::thread(&Track::TrackOdometry, ptr_tracker_, root_path_, false, true);
-                        // ptr_tracker_->TrackOdometry(root_path_, false, true);
-
-                        // waiting for ptr_thread_ptr_tracker_ complish.
-                        // ptr_tracker_->GetInitFramePosesVect(initial_poses);
-
-                        // menuVisualOdometryPoint = false;
-                        menuVisualOdometryPointLine = false;
-
-                        menuShowInitialMapPoints = true;
-                        menuShowInitialMapLines = true;
-                        menuShowInitialPoses = true; 
-
-                        menuVisualOdometryPoint.Detach();
-                        menuLocalMapPoint.Detach();
-                        menuVisualOdometryPointLine.Detach();
-                        menuLocalMapPointLine.Detach();
-                        click_start_vo = false;
-                    }
-                    else if (menuLocalMapPointLine) // TODO: Check
-                    {
-                        std::thread *ptr_thread_ptr_tracker_ = new std::thread(&Track::TrackOdometry, ptr_tracker_, root_path_, true, true);
                         // ptr_tracker_->TrackOdometry(root_path_, true, true);
-
-                        // ptr_tracker_->GetInitFramePosesVect(initial_poses);
-                        menuVisualOdometryPointLine = false;
+                        // initial_poses.clear();
+                        std::thread *ptr_thread_ptr_tracker_ = new std::thread(&Track::TrackOdometryPtr, ptr_tracker_, root_path_, true, true, std::ref(initial_poses));
+                        ptr_thread_ptr_tracker_->detach();
 
                         menuShowInitialMapPoints = true;
                         menuShowInitialMapLines = true;
                         menuShowInitialPoses = true;
-
-                        menuVisualOdometryPoint.Detach();
-                        menuLocalMapPoint.Detach();
-                        menuVisualOdometryPointLine.Detach();
                         menuLocalMapPointLine.Detach();
                         click_start_vo = false;
                     }
-
                     if (!click_start_vo)
                         std::cout
                             << std::endl
@@ -911,285 +806,238 @@ namespace simulator
                             << std::endl;
                 }
 
-                if (!click_start_vo && ptr_tracker_->mbTrackOdometry && click_do_opti) // TODO: Check
+                if (!click_start_vo && click_get_initial_pose && ptr_tracker_->mbTrackOdometry && click_do_opti) // TODO: Check
                 {
-                    if (menuVisualOdometryPointLine || menuLocalMapPointLine)
-                        ptr_tracker_->GetInitFramePosesVect(initial_poses);
-                }
+                    if (menuLocalMapPointLine)
+                    {
+                        // ptr_tracker_->GetInitFramePosesVect(initial_poses);
 
-                if (!click_start_vo && !ptr_tracker_->mbTrackOdometry && click_do_opti) // Initial map already done, and go to opti
-                {
-                    start_ba = false;
-                    menuPointBACeres = false;
-                    menuPointLineBA = false;
-                    menuPointLineBACE = false;
-                    menuPointLineBACEEx = false;
-                    menuShowOptimizedPoses = false;
-                    menuShowOptimizedMapPoints = false;
-                    menuShowOptimizedMapLines = false;
+                        // Eigen::Vector3d color_initial_;
+                        // std::vector<Vec3> points_initial_;
+
+                        color_initial_ << 0.5, 1.0, 0.5;
+                        std::vector<Vec3> points;
+                        std::map<int /*mappoint_id*/, Vec3 /*posi_in_w*/> mappoints = ptr_tracker_->local_mappoints_;
+                        for (auto &mit : mappoints)
+                            points_initial_.push_back(mit.second);
+
+                        color_pl_initial_ << 0.6, 0.9, 0.4;
+                        std::map<int /*mapline_id*/, Mat32 /*posi_in_w*/> maplines = ptr_tracker_->local_maplines_;
+                        for (auto mit = maplines.begin(); mit != maplines.end(); mit++)
+                            lines_intial_.push_back(mit->second);
+
+                        click_get_initial_pose = false;
+                    }
                 }
 
                 if (menuShowInitialMapPoints)
                 {
-                    Eigen::Vector3d color(0.5, 1.0, 0.5);
-                    std::vector<Vec3> points;
-                    std::map<int /*mappoint_id*/, Vec3 /*posi_in_w*/> mappoints = ptr_tracker_->local_mappoints_;
-                    for (auto &mit : mappoints)
-                        points.push_back(mit.second);
+                    if (!click_get_initial_pose)
+                        DrawMapPoint(points_initial_, color_initial_);
+                    else
+                    {
+                        // show mappoints incrementally
+                        points_initial_.clear();
+                        color_initial_ << 0.5, 1.0, 0.5;
+                        std::vector<Vec3> points;
+                        std::map<int /*mappoint_id*/, Vec3 /*posi_in_w*/> mappoints = ptr_tracker_->local_mappoints_;
+                        for (auto &mit : mappoints)
+                            points_initial_.push_back(mit.second);
 
-                    DrawMapPoint(points, color);
+                        DrawMapPoint(points_initial_, color_initial_);
+                    }
                 }
-                
+
                 if (menuShowInitialMapLines)
                 {
-                    Eigen::Vector3d color(0.5, 1.0, 0.5);
-                    std::vector<Mat32> lines;
-                    std::map<int /*mapline_id*/, Mat32 /*posi_in_w*/> maplines = ptr_tracker_->local_maplines_;
-                    for (auto mit = maplines.begin(); mit != maplines.end(); mit++)
-                        lines.push_back(mit->second);
-
-                    DrawMapLine(lines, color);
+                    if (!click_get_initial_pose)
+                        DrawMapLine(lines_intial_, color_pl_initial_);
+                    else
+                    {
+                        lines_intial_.clear();
+                        color_pl_initial_ << 0.6, 0.9, 0.4;
+                        std::map<int /*mapline_id*/, Mat32 /*posi_in_w*/> maplines = ptr_tracker_->local_maplines_;
+                        for (auto mit = maplines.begin(); mit != maplines.end(); mit++)
+                            lines_intial_.push_back(mit->second);
+                        DrawMapLine(lines_intial_, color_pl_initial_);
+                    }
                 }
 
                 if (menuShowInitialPoses)
                 {
                     std::vector<pangolin::OpenGlMatrix> MsTrue;
-                    if (initial_poses.size())
+                    if (!click_get_initial_pose)
                     {
-                        DrawTrajectoryConnection(MsTrue, initial_poses, Vec3(0.0, 0.0, 0.0));
-                        DrawTrajectoryCamera(MsTrue, Vec3(0.1, 0.8, 0.4));
+                        if (initial_poses.size())
+                        {
+                            DrawTrajectoryConnection(MsTrue, initial_poses, Vec3(0.4, 0.1, 0.0));
+                            DrawTrajectoryCamera(MsTrue, Vec3(0.1, 0.8, 0.4));
+                        }
+                    }
+                    else
+                    {
+                        // ptr_tracker_->GetInitFramePosesVect(initial_poses);
+                        if (initial_poses.size() > 3)
+                        {
+                            DrawTrajectoryConnection(MsTrue, initial_poses, Vec3(0.4, 0.1, 0.0));
+                            DrawTrajectoryCamera(MsTrue, Vec3(0.1, 0.8, 0.4));
+                        }
                     }
                 }
 
-                if (ptr_tracker_->mbTrackOdometry)
+                if (menuShowOptimizedMapPoints)
                 {
+                    Eigen::Vector3d color(0.1, 0.5, 0.1);
+                    // std::vector<Vec3> points;
+                    // for (auto mit = optimized_mappoints_.begin(); mit != optimized_mappoints_.end(); mit++)
+                    // {
+                    //     points.push_back(mit->second);
+                    // }
+                    DrawMapPoint(points, color);
+                }
+
+                if (menuShowOptimizedMapLines)
+                {
+                    // DrawOptimizedMapLine();
+                    Eigen::Vector3d color(0.1, 0.5, 0.1);
+                    // std::vector<Mat32> lines;
+                    // for (auto mit = optimized_maplines_.begin(); mit != optimized_maplines_.end(); mit++)
+                    // {
+                    //     lines.push_back(mit->second);
+                    // }
+                    DrawMapLine(lines, color);
+                }
+
+                if (menuShowOptimizedPoses)
+                {
+                    std::vector<pangolin::OpenGlMatrix> MsTrue;
+                    // for (auto &tws : Twcs_factorgraph)
+                    //     optimized_poses.push_back(tws.second);
+                    if (optimized_poses.size() > 0)
                     {
-                        if (menuShowOptimizedMapPoints)
-                        {
-                            Eigen::Vector3d color(0.1, 0.5, 0.1);
-                            std::vector<Vec3> points;
-                            for (auto mit = optimized_mappoints_.begin(); mit != optimized_mappoints_.end(); mit++)
-                            {
-                                points.push_back(mit->second);
-                            }
-                            DrawMapPoint(points, color);
-                        }
-
-                        if (menuShowOptimizedMapLines)
-                        {
-                            // DrawOptimizedMapLine();
-
-                            Eigen::Vector3d color(0.1, 0.5, 0.1);
-                            std::vector<Mat32> lines;
-                            for (auto mit = optimized_maplines_.begin(); mit != optimized_maplines_.end(); mit++)
-                            {
-                                lines.push_back(mit->second);
-                            }
-                            DrawMapLine(lines, color);
-                        }
-
-                        if (menuShowOptimizedPoses)
-                        {
-
-                            std::vector<pangolin::OpenGlMatrix> MsTrue;
-                            for (auto &tws : Twcs_factorgraph)
-                                optimized_poses.push_back(tws.second);
-                            if (optimized_poses.size() > 0)
-                            {
-                                DrawTrajectoryConnection(MsTrue, optimized_poses, Vec3(0.5, 0.5, 1));
-                                DrawTrajectoryCamera(MsTrue, Vec3(0.1, 0.4, 0.8));
-                            }
-                        }
+                        DrawTrajectoryConnection(MsTrue, optimized_poses, Vec3(0.5, 0.5, 1));
+                        DrawTrajectoryCamera(MsTrue, Vec3(0.1, 0.4, 0.8));
                     }
+                }
 
-                    if (ptr_tracker_->mbTrackOdometry && click_start_opti)
+                if (!click_start_vo && click_start_opti)
+                {
+                    // prepare data for optimization
+                    if (start_ba)
                     {
-                        // prepare data for optimization
-                        if (start_ba)
-                        {
-                            ptr_tracker_->GetInitFramePoses(opti_para_.kfs);
-                            // global position
-                            ptr_tracker_->GetInitMapPoints(opti_para_.mappoints);
-                            ptr_tracker_->GetInitMapLines(opti_para_.maplines);
-                            ptr_env_manager_->GetAssoMPMeas(opti_para_.asso_mp_meas);
-                            ptr_env_manager_->GetAssoFrameMPs(opti_para_.mp_obsers);
-                            ptr_env_manager_->GetAssoMLMeas(opti_para_.asso_ml_meas);
-                            ptr_env_manager_->GetAssoMLMeasD(opti_para_.asso_ml_posi);
-                            ptr_env_manager_->GetAssoParalis(opti_para_.asso_paralineid_mlids);
-                            ptr_env_manager_->GetAssoFrameMLs(opti_para_.mp_obsers);
-                            click_start_opti = false;
-                            // record
-                            IO::RecordPrivateData(root_path_, opti_para_);
-                            start_ba.Detach();
-                        }
+                        ptr_tracker_->GetInitFramePoses(opti_para_.kfs);
+                        // global position
+                        ptr_tracker_->GetInitMapPoints(opti_para_.mappoints);
+                        ptr_tracker_->GetInitMapLines(opti_para_.maplines);
+                        ptr_env_manager_->GetAssoMPMeas(opti_para_.asso_mp_meas);
+                        ptr_env_manager_->GetAssoFrameMPs(opti_para_.mp_obsers);
+                        ptr_env_manager_->GetAssoMLMeas(opti_para_.asso_ml_meas);
+                        ptr_env_manager_->GetAssoMLMeasD(opti_para_.asso_ml_posi);
+                        ptr_env_manager_->GetAssoParalis(opti_para_.asso_paralineid_mlids);
+                        ptr_env_manager_->GetAssoFrameMLs(opti_para_.mp_obsers);
+                        click_start_opti = false;
+                        // record
+                        IO::RecordPrivateData(root_path_, opti_para_);
+                        start_ba.Detach();
                     }
+                }
 
-                    if (!click_start_opti && click_do_opti)
+                if (!click_start_opti && click_do_opti)
+                {
+                    if (menuPointBACeres)
+                    {
+                        simulator::optimizer::CovisPointBA::optimizer(ptr_robot_trajectory_,
+                                                                      opti_para_,
+                                                                      optimized_mappoints_,
+                                                                      Twcs_factorgraph);
+                        menuShowOptimizedPoses = true;
+                        menuShowOptimizedMapPoints = true;
+                        std::cout << std::endl
+                                  << "\033[0;35m[Venom Similator Printer] Optimize reconstructed landmarks and "
+                                     "cameras. \033[0m"
+                                  << std::endl;
+
+                        click_do_opti = false;
+                        for (auto &tws : Twcs_factorgraph)
+                            optimized_poses.push_back(tws.second);
+                        // for (auto mit = optimized_maplines_.begin(); mit != optimized_maplines_.end(); mit++)
+                        // {
+                        //     lines.push_back(mit->second);
+                        // }
+                        for (auto mit = optimized_mappoints_.begin(); mit != optimized_mappoints_.end(); mit++)
+                        {
+                            points.push_back(mit->second);
+                        }
+                        // menuPointBAGTSAM.Detach();
+                        menuPointBACeres.Detach();
+                        menuPointLineBA.Detach();
+                        // menuPointLineBACE.Detach();
+                        // menuPointLineBACEEx.Detach();
+                    }
+                    else if (menuPointLineBA)
                     {
 
-                        if (menuPointBACeres)
+                        simulator::optimizer::CovisPointLineBA::optimizer(ptr_robot_trajectory_,
+                                                                          opti_para_,
+                                                                          optimized_mappoints_,
+                                                                          optimized_maplines_,
+                                                                          Twcs_factorgraph);
+                        menuShowOptimizedPoses = true;
+                        menuShowOptimizedMapPoints = true;
+                        menuShowOptimizedMapLines = true;
+                        std::cout << std::endl
+                                  << "\033[0;35m[Venom Similator Printer] Optimize reconstructed landmarks and "
+                                     "cameras. \033[0m"
+                                  << std::endl;
+                        click_do_opti = false;
+                        for (auto &tws : Twcs_factorgraph)
+                            optimized_poses.push_back(tws.second);
+                        for (auto mit = optimized_maplines_.begin(); mit != optimized_maplines_.end(); mit++)
                         {
-                            // std::thread* ptr_thread_ptr_tracker_ = new std::thread(&Track::TrackOdometry, ptr_tracker_, root_path_, true, true);
-
-                            std::thread *ptr_thread_CovisPointBA = new std::thread(&simulator::optimizer::CovisPointBA::optimizer,
-                                                                                   std::ref(ptr_robot_trajectory_),
-                                                                                   std::ref(opti_para_),
-                                                                                   std::ref(optimized_mappoints_),
-                                                                                   std::ref(Twcs_factorgraph));
-                            // simulator::optimizer::CovisPointBA::optimizer(ptr_robot_trajectory_,
-                            //                                             opti_para_,
-                            //                                             optimized_mappoints_,
-                            //                                             Twcs_factorgraph);
-                            menuShowOptimizedPoses = true;
-                            menuShowOptimizedMapPoints = true;
-                            std::cout << std::endl
-                                      << "\033[0;35m[Venom Similator Printer] Optimize reconstructed landmarks and "
-                                         "cameras. \033[0m"
-                                      << std::endl;
-                            // click_do_opti = false;
-                            // // menuPointBAGTSAM.Detach();
-                            // menuPointBACeres.Detach();
-                            // menuPointLineBA.Detach();
-                            // menuPointLineBACE.Detach();
-                            // menuPointLineBACEEx.Detach();
+                            lines.push_back(mit->second);
                         }
-                        else if (menuPointLineBA)
+                        for (auto mit = optimized_mappoints_.begin(); mit != optimized_mappoints_.end(); mit++)
                         {
-                            std::thread newthread(&simulator::optimizer::CovisPointLineBA::optimizer,
-                                                  std::ref(ptr_robot_trajectory_),
-                                                  std::ref(opti_para_),
-                                                  std::ref(optimized_mappoints_),
-                                                  std::ref(optimized_maplines_),
-                                                  std::ref(Twcs_factorgraph));
-
-                            // simulator::optimizer::CovisPointLineBA::optimizer(ptr_robot_trajectory_,
-                            //                                                                 opti_para_,
-                            //                                                                 optimized_mappoints_,
-                            //                                                                 optimized_maplines_,
-                            //                                                                 Twcs_factorgraph);
-                            menuShowOptimizedPoses = true;
-                            menuShowOptimizedMapPoints = true;
-                            menuShowOptimizedMapLines = true;
-                            std::cout << std::endl
-                                      << "\033[0;35m[Venom Similator Printer] Optimize reconstructed landmarks and "
-                                         "cameras. \033[0m"
-                                      << std::endl;
-                            // click_do_opti = false;
-                            // // menuPointBAGTSAM.Detach();
-                            // menuPointBACeres.Detach();
-                            // menuPointLineBA.Detach();
-                            // menuPointLineBACE.Detach();
-                            // menuPointLineBACEEx.Detach();
+                            points.push_back(mit->second);
                         }
-                        else if (menuPointLineBACE)
-                        {
-                            std::thread newthread(&simulator::optimizer::CovisPointParalineBA::optimizer,
-                                                  std::ref(ptr_robot_trajectory_),
-                                                  std::ref(opti_para_),
-                                                  std::ref(optimized_mappoints_),
-                                                  std::ref(optimized_maplines_),
-                                                  std::ref(Twcs_factorgraph));
-
-                            // simulator::optimizer::CovisPointParalineBA::optimizer(ptr_robot_trajectory_,
-                            //                                                                 opti_para_,
-                            //                                                                 optimized_mappoints_,
-                            //                                                                 optimized_maplines_,
-                            //                                                                 Twcs_factorgraph);
-                            menuShowOptimizedPoses = true;
-                            menuShowOptimizedMapPoints = true;
-                            menuShowOptimizedMapLines = true;
-                            std::cout << std::endl
-                                      << "\033[0;35m[Venom Similator Printer] Optimize reconstructed landmarks and "
-                                         "cameras. \033[0m"
-                                      << std::endl;
-                            // click_do_opti = false;
-                            // // menuPointBAGTSAM.Detach();
-                            // menuPointBACeres.Detach();
-                            // menuPointLineBA.Detach();
-                            // menuPointLineBACE.Detach();
-                            // menuPointLineBACEEx.Detach();
-                        }
-                        else if (menuPointLineBACEEx)
-                        {
-                            std::thread newthread(&simulator::optimizer::CovisExtensPointParalineBA::optimizer,
-                                                  std::ref(ptr_robot_trajectory_),
-                                                  std::ref(opti_para_),
-                                                  std::ref(optimized_mappoints_),
-                                                  std::ref(optimized_maplines_),
-                                                  std::ref(Twcs_factorgraph));
-
-                            // simulator::optimizer::CovisExtensPointParalineBA::optimizer(ptr_robot_trajectory_,
-                            //                                                                 opti_para_,
-                            //                                                                 optimized_mappoints_,
-                            //                                                                 optimized_maplines_,
-                            //                                                                 Twcs_factorgraph);
-                            menuShowOptimizedPoses = true;
-                            menuShowOptimizedMapPoints = true;
-                            menuShowOptimizedMapLines = true;
-                            std::cout << std::endl
-                                      << "\033[0;35m[Venom Similator Printer] Optimize reconstructed landmarks and "
-                                         "cameras. \033[0m"
-                                      << std::endl;
-                            // click_do_opti = false;
-                            // // menuPointBAGTSAM.Detach();
-                            // menuPointBACeres.Detach();
-                            // menuPointLineBA.Detach();
-                            // menuPointLineBACE.Detach();
-                            // menuPointLineBACEEx.Detach();
-                        }
-                        if (menuPointBACeres || menuPointLineBA || menuPointLineBACE || menuPointLineBACEEx)
-                        {
-
-                            click_do_opti = false;
-                            menuPointBACeres.Detach();
-                            menuPointLineBA.Detach();
-                            menuPointLineBACE.Detach();
-                            menuPointLineBACEEx.Detach();
-                        }
+                        menuPointBACeres.Detach();
+                        menuPointLineBA.Detach();
                     }
                 }
                 pangolin::FinishFrame();
             }
         }
-   
-        
 
-    
     private:
         /**
-         * @brief Set the System Parameters based on user's inputs 
-         * 
-         * @param traject_num 
-         * @param traject_type 
-         * @param vert_lines 
-         * @param horiz_lines 
-         * @param vert_points 
-         * @param horiz_points 
+         * @brief Set the System Parameters based on user's inputs
+         *
+         * @param traject_num
+         * @param traject_type
+         * @param vert_lines
+         * @param horiz_lines
+         * @param vert_points
+         * @param horiz_points
          */
         void GetUserSettings(const int &traject_num, const int &traject_type, const int &vert_lines,
-                                 const int &horiz_lines, const int &vert_points, const int &horiz_points)
+                             const int &horiz_lines, const int &vert_points, const int &horiz_points)
         {
             env_para_.traject_type_ = traject_type;
             env_para_.frame_num_ = traject_num;
             env_para_.vert_points_ = vert_points;
-            env_para_.horiz_points_ = horiz_points;
+            env_para_.horiz_points_ = 0;
             env_para_.vert_lines_ = vert_lines;
-            env_para_.horiz_lines_ = horiz_lines;
+            env_para_.horiz_lines_ = 0;
             // save config
-            IO::SaveSystemConfig(root_path_+"system_parameter.txt", env_para_);
+            IO::SaveSystemConfig(root_path_ + "system_parameter.txt", env_para_);
             std::cout << std::endl
                       << "\033[0;35m[Venom Similator Printer] Parameters are saved in the system_parameter file. \033[0m" << std::endl;
         }
 
-        void a()
-        {
-            int i = 0;
-            return;
-        }
         /**
          * @brief Set the Environment object: Ground truth
-         * 
-         * @param settings 
+         *
+         * @param settings
          */
         void SetEnvironment(cv::FileStorage &settings)
         {
@@ -1197,46 +1045,42 @@ namespace simulator
             ptr_env_manager_ = new simulator::EnvManager(env_para_, settings);
             // initialize trajectory
             ptr_robot_trajectory_ = ptr_env_manager_->ptr_robot_trajectory_;
-            for(auto frame_info : ptr_robot_trajectory_->groundtruth_traject_id_Twc_)
+            for (auto frame_info : ptr_robot_trajectory_->groundtruth_traject_id_Twc_)
             {
-                int frame_idx = frame_info.first;
-                // for drawing 
+                // int frame_idx = frame_info.first;
+                // for drawing
                 Twcs_true_.push_back(frame_info.second);
             }
-            
+
             bool is_public = false;
             settings["Env.Public.bool"] >> is_public;
 
-            std::cout << "Building Points" << std::endl;
-            std::cout << "Building Lines" << std::endl;
-
-            if(is_public)
+            if (is_public)
             {
-                std::thread *ptr_thread_BuildPublicPoints = new std::thread(&EnvManager::BuildPublicPoints, ptr_env_manager_);
-                std::thread *ptr_thread_BuildPublicLines = new std::thread(&EnvManager::BuildPublicLines, ptr_env_manager_);
-                ptr_thread_BuildPublicPoints->join();
-                ptr_thread_BuildPublicLines->join();
-                // ptr_env_manager_->BuildPublicPoints();   // 16s
+                // std::cout << "read public 0" << std::endl;
+                ptr_env_manager_->BuildPublicPoints();
+                // std::cout << "read public" << std::endl;
                 ptr_env_manager_->GetEnvPoints(points_gt_); // for visualizaiton
-                // ptr_env_manager_->BuildPublicLines();    //18s
+                // std::cout << "read public 2" << std::endl;
+                ptr_env_manager_->BuildPublicLines();
                 ptr_env_manager_->GetEnvLines(lines_gt_); // for visualizaiton
             }
-            // else
-            // {
-            //     // env_points
-            //     ptr_env_manager_->BuildEnvPoints(); //build ground truth points
-            //     ptr_env_manager_->GetEnvPoints(points_gt_); // for visualizaiton
-            //     // env_lines
-            //     ptr_env_manager_->BuildEnvLines();   // build ground truth lines
-            //     ptr_env_manager_->GetEnvLines(lines_gt_); // for visualizaiton
-            // }
+            else
+            {
+                // env_points
+                ptr_env_manager_->BuildEnvPoints();         // build ground truth points
+                ptr_env_manager_->GetEnvPoints(points_gt_); // for visualizaiton
+                // env_lines
+                ptr_env_manager_->BuildEnvLines();        // build ground truth lines
+                ptr_env_manager_->GetEnvLines(lines_gt_); // for visualizaiton
+            }
         }
 
         /**
-         * @brief 
-         * 
-         * @param lines 
-         * @param color 
+         * @brief
+         *
+         * @param lines
+         * @param color
          */
         void DrawMapLine(std::vector<Mat32> &lines, Eigen::Vector3d &color)
         {
@@ -1252,12 +1096,12 @@ namespace simulator
             }
             glEnd();
         }
-        
+
         /**
          * @brief Draw map points
-         * 
-         * @param points 
-         * @param color 
+         *
+         * @param points
+         * @param color
          */
         void DrawMapPoint(std::vector<Vec3> &points, Eigen::Vector3d &color)
         {
@@ -1269,15 +1113,15 @@ namespace simulator
                 glVertex3d(p[0], p[1], p[2]);
             glEnd();
         }
-       
+
         /**
-         * @brief 
-         * 
-         * @param Ms 
-         * @param Twcs_true 
-         * @param color 
+         * @brief
+         *
+         * @param Ms
+         * @param Twcs_true
+         * @param color
          */
-        void DrawTrajectoryConnection(std::vector<pangolin::OpenGlMatrix> &Ms, std::vector<Mat4> &Twcs_true, Vec3 color=Vec3(0,1,0))
+        void DrawTrajectoryConnection(std::vector<pangolin::OpenGlMatrix> &Ms, std::vector<Mat4> &Twcs_true, Vec3 color = Vec3(0, 1, 0))
         {
             {
                 Ms.clear();
@@ -1321,25 +1165,26 @@ namespace simulator
             }
             glEnd();
         }
-       
+
         /**
-         * @brief 
-         * 
-         * @param connections 
+         * @brief
+         *
+         * @param connections
          */
-        void DrawTrajectoryConnection(std::vector<Vec3> &connections) 
+        void DrawTrajectoryConnection(std::vector<Vec3> &connections)
         {
             glLineWidth(2);
-            for (int j = 0; j < connections.size(); j++) {
+            for (int j = 0; j < connections.size(); j++)
+            {
                 // std::cout<<"venom_association_[i]:"<<venom_association_[j].size()<<std::endl;
-                int edge_type = connections[j](0);  // 0, 1
-                
+                int edge_type = connections[j](0); // 0, 1
+
                 assert(edge_type >= 0);
                 int vertex_1 = connections[j](1);
                 int vertex_2 = connections[j](2);
-             
+
                 glBegin(GL_LINES);
-                int color = 0.2 + edge_type * edge_type / 4;  //
+                int color = 0.2 + edge_type * edge_type / 4; //
                 glColor3f(0.5f * color, 1.f * color, 0.1f * color);
 
                 glVertex3f(Twcs_true_[vertex_2](0, 3),
@@ -1351,22 +1196,21 @@ namespace simulator
             }
             glEnd();
         }
-        
-        
+
         /**
-         * @brief 
-         * 
-         * @param M 
-         * @param r 
-         * @param g 
-         * @param b 
+         * @brief
+         *
+         * @param M
+         * @param r
+         * @param g
+         * @param b
          */
         void DrawSigCam(pangolin::OpenGlMatrix &M, GLfloat &r, GLfloat &g, GLfloat &b)
         {
             // camera size
-            const float &w = 0.075;
-            const float h = w * 0.155;
-            const float z = w * 0.15;
+            const float &w = 0.1;
+            const float h = w * 0.638;
+            const float z = w * 0.6;
 
             glPushMatrix();
 
@@ -1404,12 +1248,12 @@ namespace simulator
         }
 
         /**
-         * @brief 
-         * 
-         * @param Ms 
-         * @param color 
+         * @brief
+         *
+         * @param Ms
+         * @param color
          */
-        void DrawTrajectoryCamera(std::vector<pangolin::OpenGlMatrix> &Ms, Vec3 color=Vec3(0,0,1)  )
+        void DrawTrajectoryCamera(std::vector<pangolin::OpenGlMatrix> &Ms, Vec3 color = Vec3(0, 0, 1))
         {
             for (auto &M : Ms)
             {
@@ -1419,24 +1263,7 @@ namespace simulator
                 DrawSigCam(M, r, g, b);
             }
         }
-
-        void DrawCoordiante()
-        {
-            glLineWidth(4.0);
-            glBegin(GL_LINES);
-            Eigen::Matrix3d coord = Eigen::Matrix3d::Identity();
-            for (int i = 0; i < 3; i++)
-            {
-                // r g b
-                // std::cout << "sss" << std::endl;
-                glColor3f(255 * coord(i, 0), coord(i, 1) * 255, coord(i, 2) * 255);
-                glVertex3f(0, 0, 0);
-                glVertex3f(coord(i, 0), coord(i, 1), coord(i, 2));
-            }
-            glEnd();
-        }
-       };
-
+    };
 }
 
 #endif //__VENOM_SRC_VISUALIZER_INTERFACE_HPP__

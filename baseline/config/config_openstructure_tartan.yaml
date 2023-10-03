@@ -8,18 +8,17 @@ File.version: "1.0"
 Camera.type: "PinHole"
 
 # Camera calibration and distortion parameters (OpenCV) 
-Camera1.fx: 481.2
-Camera1.fy: -480.0
-Camera1.cx: 319.5
-Camera1.cy: 239.50
+Camera1.fx: 320 
+Camera1.fy: 320
+Camera1.cx: 320
+Camera1.cy: 240
 
+Camera1.k1: 0.0
+Camera1.k2: 0.0
+Camera1.p1: 0.0
+Camera1.p2: 0.0
 
-Camera1.k1: 0
-Camera1.k2: 0
-Camera1.p1: 0
-Camera1.p2: 0
-
-Camera.width: 752
+Camera.width: 640
 Camera.height: 480
 
 Camera.newWidth: 600
@@ -34,23 +33,21 @@ Env.Map.env_width: 11
 Env.Map.env_height: 8
 Env.Map.env_length: 7
 
-
-#type: 6 -  CMU-Tartanair Dataset
-#      7 -  ICL-NUIM Dataset
-#      8 -  TUM Dataset
-#      9 -  Euroc Dataset
-Env.Public.type: 9
-Env.Public.bool: 1
-Env.Public.envtraj_path: "/home/VENOM/Open-Structure/dataset/icl_lrvt0/input/camera_poses.txt"
-Env.Public.envpoint_path: "/home/VENOM/Open-Structure/dataset/icl_lrvt0/input/point_landmarks.txt"
-Env.Public.envline_path: "/home/VENOM/Open-Structure/dataset/icl_lrvt0/input/line_landmarks.txt"
-Env.Public.associate_path: "/home/VENOM/Open-Structure/dataset/icl_lrvt0/input/associations.txt"
-# Env.Public.envtraj_num: 633
-# Env.Public.envpoint_num: 2560
-# Env.Public.envline_num: 102
+Env.ReadOpenStructure.bool: 1
+Env.Public.envtraj_path: "../../dataset/1002/datasets/hospital/camera_poses.txt"
+Env.Public.envpoint_path: "../../dataset/1002/datasets/hospital/point_landmarks.txt" #results/V103/3DMap_registered.txt"
+Env.Public.envline_path: "../../dataset/1002/datasets/hospital/line_landmarks.txt"
+Env.Public.associate_path: "../../dataset/1002/datasets/hospital/association.txt"
+# Env.Public.envtraj_path: "../../dataset/0916/icl/office2/input/camera_poses.txt"
+# Env.Public.envpoint_path: "../../dataset/0916/icl/office2/input/point_landmarks.txt" #results/V103/3DMap_registered.txt"
+# Env.Public.envline_path: "../../dataset/0916/icl/office2/input/line.txt"
+# Env.Public.associate_path: "../../dataset/0916/icl/office2/input/associations.txt"
+Env.Public.envtraj_num: 633
+Env.Public.envpoint_num: 2560
+Env.Public.envline_num: 102
 
 # results_path 
-Evaluation.result_path: "../evaluation/icl/"
+Evaluation.result_path: "../evaluation/office2/"
 
 # Camera frames per second 
 Camera.fps: 30

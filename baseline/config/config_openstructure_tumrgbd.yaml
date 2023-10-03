@@ -8,17 +8,17 @@ File.version: "1.0"
 Camera.type: "PinHole"
 
 # Camera calibration and distortion parameters (OpenCV) 
-Camera1.fx: 458.654
-Camera1.fy: 457.296
-Camera1.cx: 367.215
-Camera1.cy: 248.375
+Camera1.fx: 535.4 
+Camera1.fy: 539.2
+Camera1.cx: 320.1
+Camera1.cy: 247.6
 
-Camera1.k1: -0.28340811
-Camera1.k2: 0.07395907
-Camera1.p1: 0.00019359
-Camera1.p2: 1.76187114e-05
+Camera1.k1: 0.0
+Camera1.k2: 0.0
+Camera1.p1: 0.0
+Camera1.p2: 0.0
 
-Camera.width: 752
+Camera.width: 640
 Camera.height: 480
 
 Camera.newWidth: 600
@@ -29,20 +29,25 @@ Track.noise_input: 1
 # Dataset
 
 Env.Trajectory.radius: 5
-Env.Map.env_width: 20
+Env.Map.env_width: 11
 Env.Map.env_height: 8
-Env.Map.env_length: 20
+Env.Map.env_length: 7
 
-Env.Public.bool: 1
-Env.Public.envtraj_path: "../dataset/public/v1/v103_pose_gt.txt"
-Env.Public.envpoint_path: "../dataset/public/v1/point.txt"
-Env.Public.envline_path: "../dataset/public/v1/paraline.txt"
-#Env.Public.envtraj_num: 2310 #2297  #
-#Env.Public.envpoint_num: 2560
-#Env.Public.envline_num: 102
+Env.ReadOpenStructure.bool: 1
+Env.Public.envtraj_path: "../../dataset/1002/datasets/rgbd_dataset_freiburg3_structure_notexture_far/camera_poses.txt"
+Env.Public.envpoint_path: "../../dataset/1002/datasets/rgbd_dataset_freiburg3_structure_notexture_far/point_landmarks.txt" #results/V103/3DMap_registered.txt"
+Env.Public.envline_path: "../../dataset/1002/datasets/rgbd_dataset_freiburg3_structure_notexture_far/line_landmarks.txt"
+Env.Public.associate_path: "../../dataset/1002/datasets/rgbd_dataset_freiburg3_structure_notexture_far/association.txt"
+# Env.Public.envtraj_path: "../../dataset/0916/icl/office2/input/camera_poses.txt"
+# Env.Public.envpoint_path: "../../dataset/0916/icl/office2/input/point_landmarks.txt" #results/V103/3DMap_registered.txt"
+# Env.Public.envline_path: "../../dataset/0916/icl/office2/input/line.txt"
+# Env.Public.associate_path: "../../dataset/0916/icl/office2/input/associations.txt"
+Env.Public.envtraj_num: 633
+Env.Public.envpoint_num: 2560
+Env.Public.envline_num: 102
 
 # results_path 
-Evaluation.result_path: "../evaluation/V102/"
+Evaluation.result_path: "../evaluation/office2/"
 
 # Camera frames per second 
 Camera.fps: 30
