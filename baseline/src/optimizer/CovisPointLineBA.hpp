@@ -76,6 +76,9 @@ namespace simulator
                     int ml_id = ml->first;
                     if (opti_para.maplines[ml_id] == Mat32::Zero())
                         continue;
+                    double line_length = (opti_para.maplines[ml_id].col(0) - opti_para.maplines[ml_id].col(1)).norm();
+                    if (line_length < 0.1)
+                        assert(1 == 0);
                     Eigen::Vector3d StartPoint = ml->second.col(0);
                     Eigen::Vector3d EndPoint = ml->second.col(1);
                     Eigen::Vector3d LineDirection = EndPoint - StartPoint;

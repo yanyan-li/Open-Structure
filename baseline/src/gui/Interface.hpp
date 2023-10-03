@@ -57,20 +57,20 @@ namespace simulator
         simulator::Trajectory *ptr_robot_trajectory_;
         simulator::Track *ptr_tracker_;
         //
-        std::vector<std::vector<std::pair<int, Vec3>>> point_obs_;
-        std::vector<double> tri_point_inverse_depth_;
-        std::vector<Vec3> tri_point_xyz_;
+        // std::vector<std::vector<std::pair<int, Vec3>>> point_obs_;
+        // std::vector<double> tri_point_inverse_depth_;
+        // std::vector<Vec3> tri_point_xyz_;
 
         std::map<int, Eigen::Vector3d> optimized_mappoints_;
         std::map<int, Mat32> optimized_maplines_;
         //
-        std::vector<std::vector<std::pair<int /*frame_id*/, Eigen::Matrix3d /*Rcm*/>>> venom_association_;
-        std::vector<int> vec_anchor_id_;
+        // std::vector<std::vector<std::pair<int /*frame_id*/, Eigen::Matrix3d /*Rcm*/>>> venom_association_;
+        // std::vector<int> vec_anchor_id_;
         // rotation estimation
-        std::vector<std::vector<std::pair<int, Eigen::Matrix3d>>> rotation_from_venom_;
-        std::vector<std::vector<std::pair<int, Eigen::Matrix3d>>> rotation_from_groundtruth_;
+        // std::vector<std::vector<std::pair<int, Eigen::Matrix3d>>> rotation_from_venom_;
+        // std::vector<std::vector<std::pair<int, Eigen::Matrix3d>>> rotation_from_groundtruth_;
         // predicted rot_cw
-        std::vector<std::pair<int /*frame_id*/, Mat4 /*frame_pose*/>> vec_traject_estimated_Twc_;
+        // std::vector<std::pair<int /*frame_id*/, Mat4 /*frame_pose*/>> vec_traject_estimated_Twc_;
 
     private:
         //--> parameters
@@ -83,12 +83,12 @@ namespace simulator
         int vert_points_;
         int horiz_points_;
         std::string root_path_;
+
         std::vector<Vec3> points_gt;
         std::vector<Mat32> lines_gt;
 
         Eigen::Vector3d color_initial_;
         std::vector<Vec3> points_initial_;
-
         Eigen::Vector3d color_pl_initial_;
         std::vector<Mat32> lines_intial_;
 
@@ -556,8 +556,8 @@ namespace simulator
             // bool click_save_dataset = true;
             bool click_start_track = true;
             bool click_read_public = false;
-            venom_settings["Env.Public.bool"] >> click_read_public;
-            
+            venom_settings["Env.ReadOpenStructure.bool"] >> click_read_public;
+
             while (!pangolin::ShouldQuit())
             {
                 glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -585,7 +585,7 @@ namespace simulator
                     else if (traject_type == 2)
                         set_traject_type = "Corridor";
                     else if (traject_type == 9)
-                        set_traject_type = "OpenStructure Dataset";
+                        set_traject_type = "OpenStructure Sequence";
 
                     // get size parameters of the env
                     if(click_read_public)  // set parameters of public datasets
@@ -819,7 +819,11 @@ namespace simulator
                         std::vector<Vec3> points;
                         std::map<int /*mappoint_id*/, Vec3 /*posi_in_w*/> mappoints = ptr_tracker_->local_mappoints_;
                         for (auto &mit : mappoints)
+                        {
+                            if (mit.second.norm() < 0.01)
+                                std::cout << "point:" << mit.second << std::endl;
                             points_initial_.push_back(mit.second);
+                        }
 
                         color_pl_initial_ << 0.6, 0.9, 0.4;
                         std::map<int /*mapline_id*/, Mat32 /*posi_in_w*/> maplines = ptr_tracker_->local_maplines_;
@@ -1052,10 +1056,10 @@ namespace simulator
                 Twcs_true_.push_back(frame_info.second);
             }
 
-            bool is_public = false;
-            settings["Env.Public.bool"] >> is_public;
+            bool read_open_structure = false;
+            settings["Env.ReadOpenStructure.bool"] >> read_open_structure;
 
-            if (is_public)
+            if (read_open_structure)
             {
                 // std::cout << "read public 0" << std::endl;
                 ptr_env_manager_->BuildPublicPoints();
@@ -1065,7 +1069,7 @@ namespace simulator
                 ptr_env_manager_->BuildPublicLines();
                 ptr_env_manager_->GetEnvLines(lines_gt_); // for visualizaiton
             }
-            else
+            else // user design
             {
                 // env_points
                 ptr_env_manager_->BuildEnvPoints();         // build ground truth points

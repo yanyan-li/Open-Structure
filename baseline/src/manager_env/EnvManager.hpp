@@ -54,8 +54,8 @@ namespace simulator
     private:
         //------> parameters
         simulator::EnvironmentParameter env_para_;
-        std::vector<Vec3> v_points_;
-        std::vector<Mat32> v_lines_;
+        std::vector<Vec3> vec_points_;
+        std::vector<Mat32> vec_lines_;
 
         //------> map manager
         std::vector<std::pair<int, Vec3>> vec_epid_pos_w_;
@@ -194,7 +194,7 @@ namespace simulator
             //                     Mat32 pos_in_cam = ob->second;
             //                     asso_frameid_elid_[frame_id].push_back(std::make_pair(id, pos_in_cam));
             //                 }
-            //                 v_lines_.push_back(ptr_ml->pos_world_);
+            //                 vec_lines_.push_back(ptr_ml->pos_world_);
             //                 // plucker representation
             //                 // int anchor_frame_id = -1;
             //                 // ptr_ml->GetAnchorFrameId(anchor_frame_id);
@@ -290,7 +290,7 @@ namespace simulator
                 }
 
                 // gt
-                v_points_.push_back(ptr_ep->pos_world_);
+                vec_points_.push_back(ptr_ep->pos_world_);
                 vec_epid_pos_w_.push_back(std::make_pair(ptr_ep->num_id_, ptr_ep->pos_world_)); // after checking
             }
         }
@@ -367,7 +367,7 @@ namespace simulator
                 }
 
                 // gt
-                v_points_.push_back(ptr_ep->pos_world_);
+                vec_points_.push_back(ptr_ep->pos_world_);
                 vec_epid_pos_w_.push_back(std::make_pair(ptr_ep->num_id_, ptr_ep->pos_world_)); // after checking
             }
         }
@@ -445,7 +445,7 @@ namespace simulator
                 }
 
                 // gt
-                v_points_.push_back(ptr_ep->pos_world_);
+                vec_points_.push_back(ptr_ep->pos_world_);
                 vec_epid_pos_w_.push_back(std::make_pair(ptr_ep->num_id_, ptr_ep->pos_world_)); // after checking
             }
         }
@@ -523,7 +523,7 @@ namespace simulator
                 }
 
                 // gt
-                v_lines_.push_back(ptr_ml->pos_world_);
+                vec_lines_.push_back(ptr_ml->pos_world_);
                 vec_elid_pos_w_.push_back(std::make_pair(ptr_ml->num_id_, ptr_ml->pos_world_));
             }
         }
@@ -602,7 +602,7 @@ namespace simulator
                 }
 
                 // gt
-                v_lines_.push_back(ptr_ml->pos_world_);
+                vec_lines_.push_back(ptr_ml->pos_world_);
                 vec_elid_pos_w_.push_back(std::make_pair(ptr_ml->num_id_, ptr_ml->pos_world_));
             }
         }
@@ -675,7 +675,7 @@ namespace simulator
                 }
 
                 // gt
-                v_lines_.push_back(ptr_ml->pos_world_);
+                vec_lines_.push_back(ptr_ml->pos_world_);
                 vec_elid_pos_w_.push_back(std::make_pair(ptr_ml->num_id_, ptr_ml->pos_world_));
             }
         }
@@ -729,7 +729,7 @@ namespace simulator
             //         asso_epid_frameid_pos_[id] = ptr_ep->obs_frame_pos_;
             //     }
             //     // gt
-            //     v_points_.push_back(ptr_ep->pos_world_);
+            //     vec_points_.push_back(ptr_ep->pos_world_);
             //     vec_epid_pos_w_.push_back(std::make_pair(ptr_ep->num_id_, ptr_ep->pos_world_)); // after checking
             // }
         }
@@ -752,7 +752,7 @@ namespace simulator
             //         Mat32 pos_in_cam = ob->second;
             //         asso_frameid_elid_[frame_id].push_back(std::make_pair(id, pos_in_cam));
             //     }
-            //     v_lines_.push_back(ptr_ml->pos_world_);
+            //     vec_lines_.push_back(ptr_ml->pos_world_);
 
             //     // association
             //     // assert(set_id>0);
@@ -771,6 +771,7 @@ namespace simulator
 
             for (int i = 0; i < maplines.size(); i++)
             {
+                // set_id for parallel
                 int set_id = -1;
 
                 double id = maplines[i][0];
@@ -779,7 +780,10 @@ namespace simulator
                 ptr_ml->GenerateEnvLine(maplines[i], false);
                 set_id = ptr_ml->vanishing_direction_type_;
 
-                ptr_ml->AddObservation(ptr_robot_trajectory_->groundtruth_traject_id_Twc_,
+                // ptr_ml->AddObservation(ptr_robot_trajectory_->groundtruth_traject_id_Twc_,
+                //                        b_add_noise_to_meas);
+
+                ptr_ml->AddObservation(ptr_robot_trajectory_->groundtruth_traject_id_Twc_, asso_elid_frameid,
                                        b_add_noise_to_meas);
 
                 for (auto ob = ptr_ml->obs_frameid_linepos_.begin(), ob_end = ptr_ml->obs_frameid_linepos_.end(); ob != ob_end; ob++)
@@ -788,7 +792,6 @@ namespace simulator
                     Mat32 pos_in_cam = ob->second;
                     asso_frameid_elid_[frame_id].push_back(std::make_pair(id, pos_in_cam));
                 }
-                v_lines_.push_back(ptr_ml->pos_world_);
 
                 // association
                 // assert(set_id>0);
@@ -797,36 +800,16 @@ namespace simulator
                 asso_elid_frameid_pos_[id] = ptr_ml->obs_frameid_linepos_;
                 asso_elid_frameid_pixeld_[id] = ptr_ml->obs_frameid_linepixel_;
                 // gt
+                vec_lines_.push_back(ptr_ml->pos_world_);
                 vec_elid_pos_w_.push_back(std::make_pair(ptr_ml->num_id_, ptr_ml->pos_world_));
             }
         }
 
         void BuildPublicPoints()
         {
-            // std::vector<Eigen::Vector3d> pts;
-            // IO::ReadPublicPointClouds(envpoint_path_, pts);
-            // for (int id = 0; id < pts.size(); id++)
-            // {
-            //     simulator::EnvPoint *ptr_ep = new simulator::EnvPoint(id, ptr_robot_trajectory_); // MapPoint(id, ptr_robot_trajectory_);
-            //     ptr_ep->GenerateEnvPoint(pts[id]);
-
-            //     ptr_ep->AddObservation(ptr_robot_trajectory_->groundtruth_traject_id_Twc_, b_add_noise_to_meas);
-            //     for (auto ob = ptr_ep->obs_frame_pos_.begin(), ob_end = ptr_ep->obs_frame_pos_.end(); ob != ob_end; ob++)
-            //     {
-            //         int frame_id = ob->first;
-            //         Vec3 pos_in_cam = ob->second;
-            //         asso_frameid_epid_[frame_id].push_back(std::make_pair(id, pos_in_cam));
-            //     }
-            //     // association
-            //     asso_epid_frameid_pixeld_[id] = ptr_ep->obs_frame_pixel_;
-            //     asso_epid_frameid_pos_[id] = ptr_ep->obs_frame_pos_;
-            //     // gt
-            //     v_points_.push_back(ptr_ep->pos_world_);
-            //     vec_epid_pos_w_.push_back(std::make_pair(ptr_ep->num_id_, ptr_ep->pos_world_)); // after checking
-            // }
-            std::vector<std::pair<int /*point_id*/, Eigen::Vector3d>> pts;
+            std::vector<std::pair<int /*point_id*/, Eigen::Vector3d /*point_position*/>> pts;
             IO::ReadPublicPointClouds(envpoint_path_, pts);
-            std::vector<std::pair<int, int>> asso_epid_frameid;
+            std::vector<std::pair<int /*mp_id*/, int /*frame_id*/>> asso_epid_frameid;
             IO::ReadPublicPointAssociation(associate_path_, asso_epid_frameid);
 
             for (auto pt : pts)
@@ -834,8 +817,8 @@ namespace simulator
                 int id = pt.first;
                 simulator::EnvPoint *ptr_ep = new simulator::EnvPoint(id, ptr_robot_trajectory_); // MapPoint(id, ptr_robot_trajectory_);
                 ptr_ep->GenerateEnvPoint(pt.second);
-                std::cout << "pt:" << asso_epid_frameid.size() << std::endl;
                 ptr_ep->AddObservation(ptr_robot_trajectory_->groundtruth_traject_id_Twc_, asso_epid_frameid, b_add_noise_to_meas);
+
                 for (auto ob = ptr_ep->obs_frame_pos_.begin(), ob_end = ptr_ep->obs_frame_pos_.end(); ob != ob_end; ob++)
                 {
                     int frame_id = ob->first;
@@ -846,7 +829,7 @@ namespace simulator
                 asso_epid_frameid_pixeld_[id] = ptr_ep->obs_frame_pixel_;
                 asso_epid_frameid_pos_[id] = ptr_ep->obs_frame_pos_;
                 // gt
-                v_points_.push_back(ptr_ep->pos_world_);
+                vec_points_.push_back(ptr_ep->pos_world_);
                 vec_epid_pos_w_.push_back(std::make_pair(ptr_ep->num_id_, ptr_ep->pos_world_)); // after checking
             }
         }
@@ -915,12 +898,12 @@ namespace simulator
         void GetEnvPoints(std::vector<Vec3> &env_points)
         {
             // without noise
-            env_points = v_points_;
+            env_points = vec_points_;
         }
 
         void GetEnvLines(std::vector<Eigen::Matrix<double, 3, 2>> &env_lines)
         {
-            env_lines = v_lines_;
+            env_lines = vec_lines_;
         }
 
         void GetAssoParalis(std::map<int /*mapparaline_id*/, std::vector<int>> &asso_paralineid_elids)

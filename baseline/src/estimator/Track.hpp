@@ -189,7 +189,7 @@ namespace simulator
                 // pose in the world coordinate
                 Mat4 prev_pose_in_world, curr_gt_pose_in_world; 
                 // relative pose from i-1 to i
-                Mat4 pose_curr_in_prev, pose_gt_curr_in_prev;  
+                Mat4 relative_pose_curr_in_w, pose_gt_curr_in_prev;
                 // map tracking from map to i
                 Mat4 pose_curr_in_map;
                 
@@ -272,11 +272,11 @@ namespace simulator
                 {
                     DrawMeasurements(obs_point_[frame_id], obs_line_[frame_id], frame_id);
                     // relative pose  T_{prev, curr}
-                    pose_curr_in_prev = RelativePoseEstimation(prev_pose_in_world,
-                                                               obs_point_[frame_id - 1],
-                                                               obs_line_[frame_id - 1],
-                                                               obs_point_[frame_id],
-                                                               obs_line_[frame_id]);
+                    relative_pose_curr_in_w = RelativePoseEstimation(prev_pose_in_world,
+                                                                     obs_point_[frame_id - 1],
+                                                                     obs_line_[frame_id - 1],
+                                                                     obs_point_[frame_id],
+                                                                     obs_line_[frame_id]);
 
                     if (with_localmap)
                     {
@@ -300,6 +300,7 @@ namespace simulator
                             // init local_mappoints
                             //  return;
                             pose_curr_in_map = prev_pose_in_world;
+                            std::cout << "prev:" << prev_pose_in_world << std::endl;
                         }
                     }
 
@@ -308,7 +309,7 @@ namespace simulator
                         if (with_localmap)
                             FuseMapPoint(local_mappoints_, pose_curr_in_map, obs_point_[frame_id]);
                         else
-                            FuseMapPoint(local_mappoints_, pose_curr_in_prev, obs_point_[frame_id]);
+                            FuseMapPoint(local_mappoints_, relative_pose_curr_in_w, obs_point_[frame_id]);
                     }
                     else if (with_lines)
                     {
@@ -320,21 +321,21 @@ namespace simulator
                         else
                         {
 
-                            FuseMapPoint(local_mappoints_, pose_curr_in_prev, obs_point_[frame_id]);
-                            FuseMapLine(local_maplines_, pose_curr_in_prev, obs_line_[frame_id]);
+                            FuseMapPoint(local_mappoints_, relative_pose_curr_in_w, obs_point_[frame_id]);
+                            FuseMapLine(local_maplines_, relative_pose_curr_in_w, obs_line_[frame_id]);
                         }
                     }
 
                     // relative gt pose: T_{curr, prev} = T_{w, curr}.inverse() * T_{w, prev}
                     // pose_gt_curr_in_prev = robot_traject_->vec_traject_gt_Twc_[frame_id].inverse() * robot_traject_->vec_traject_gt_Twc_[frame_id - 1];
                     // curr_gt_pose_in_world = robot_traject_->vec_traject_gt_Twc_[frame_id];
-                    prev_pose_in_world = pose_curr_in_map;
+                    // prev_pose_in_world = relative_pose_curr_in_w;
                     pose_gt_curr_in_prev = frame.second.inverse() * robot_traject_->groundtruth_traject_id_Twc_[frame_id - 1];
                     curr_gt_pose_in_world = frame.second;
                     prev_pose_in_world = pose_curr_in_map;
                 }
 
-                vec_vo_Twc_.push_back(std::make_pair(frame_id, prev_pose_in_world));
+                vec_vo_Twc_.push_back(std::make_pair(frame_id, relative_pose_curr_in_w));
                 vec_gt_Twc.push_back(std::make_pair(frame_id, curr_gt_pose_in_world));
                 vec_localmap_Twc_.push_back(std::make_pair(frame_id, pose_curr_in_map));
 #ifdef __VERBOSE__NOT
@@ -345,7 +346,7 @@ namespace simulator
                 // std::cout << "relative ground truth pose:" << std::endl
                 //           << pose_gt_curr_in_prev << std::endl;
                 // std::cout << "relative pose (T_{i-1,i}):" << std::endl
-                //           << pose_curr_in_prev << std::endl;
+                //           << relative_pose_curr_in_w << std::endl;
                 std::cout << "predicted pose in map (T_{w,i}):" << std::endl
                           << pose_curr_in_map << std::endl;
 #endif
@@ -376,7 +377,7 @@ namespace simulator
                 // pose in the world coordinate
                 Mat4 prev_pose_in_world, curr_gt_pose_in_world;
                 // relative pose from i-1 to i
-                Mat4 pose_curr_in_prev, pose_gt_curr_in_prev;
+                Mat4 relative_pose_curr_in_w, pose_gt_curr_in_prev;
                 // map tracking from map to i
                 Mat4 pose_curr_in_map;
 
@@ -459,15 +460,15 @@ namespace simulator
                 {
                     DrawMeasurements(obs_point_[frame_id], obs_line_[frame_id], frame_id);
                     // relative pose  T_{prev, curr}
-                    pose_curr_in_prev = RelativePoseEstimation(prev_pose_in_world,
-                                                               obs_point_[frame_id - 1],
-                                                               obs_line_[frame_id - 1],
-                                                               obs_point_[frame_id],
-                                                               obs_line_[frame_id]);
+                    relative_pose_curr_in_w = RelativePoseEstimation(prev_pose_in_world,
+                                                                     obs_point_[frame_id - 1],
+                                                                     obs_line_[frame_id - 1],
+                                                                     obs_point_[frame_id],
+                                                                     obs_line_[frame_id]);
 
                     if (with_localmap)
                     {
-                        pose_curr_in_map = LocalMapPoseEstimation(vec_epid_pos_w_,
+                        pose_curr_in_map = LocalMapPoseEstimation(local_mappoints_,
                                                                   obs_point_[frame_id],
                                                                   frame.second,
                                                                   frame_id); //
@@ -495,7 +496,7 @@ namespace simulator
                         if (with_localmap)
                             FuseMapPoint(local_mappoints_, pose_curr_in_map, obs_point_[frame_id]);
                         else
-                            FuseMapPoint(local_mappoints_, pose_curr_in_prev, obs_point_[frame_id]);
+                            FuseMapPoint(local_mappoints_, relative_pose_curr_in_w, obs_point_[frame_id]);
                     }
                     else if (with_lines)
                     {
@@ -507,8 +508,8 @@ namespace simulator
                         else
                         {
 
-                            FuseMapPoint(local_mappoints_, pose_curr_in_prev, obs_point_[frame_id]);
-                            FuseMapLine(local_maplines_, pose_curr_in_prev, obs_line_[frame_id]);
+                            FuseMapPoint(local_mappoints_, relative_pose_curr_in_w, obs_point_[frame_id]);
+                            FuseMapLine(local_maplines_, relative_pose_curr_in_w, obs_line_[frame_id]);
                         }
                     }
 
@@ -518,10 +519,9 @@ namespace simulator
                     prev_pose_in_world = pose_curr_in_map;
                     pose_gt_curr_in_prev = frame.second.inverse() * robot_traject_->groundtruth_traject_id_Twc_[frame_id - 1];
                     curr_gt_pose_in_world = frame.second;
-                    prev_pose_in_world = pose_curr_in_map;
                 }
 
-                vec_vo_Twc_.push_back(std::make_pair(frame_id, prev_pose_in_world));
+                vec_vo_Twc_.push_back(std::make_pair(frame_id, relative_pose_curr_in_w));
                 vec_gt_Twc.push_back(std::make_pair(frame_id, curr_gt_pose_in_world));
                 vec_localmap_Twc_.push_back(std::make_pair(frame_id, pose_curr_in_map));
 #ifdef __VERBOSE__NOT
@@ -532,7 +532,7 @@ namespace simulator
                 // std::cout << "relative ground truth pose:" << std::endl
                 //           << pose_gt_curr_in_prev << std::endl;
                 // std::cout << "relative pose (T_{i-1,i}):" << std::endl
-                //           << pose_curr_in_prev << std::endl;
+                //           << relative_pose_curr_in_w << std::endl;
                 std::cout << "predicted pose in map (T_{w,i}):" << std::endl
                           << pose_curr_in_map << std::endl;
 #endif
@@ -584,7 +584,7 @@ namespace simulator
             }
 
             // pnp for pose estimation
-            if (vec_data_pnp.size() < 6)
+            if (vec_data_pnp.size() < 5)
             {
                 std::cout << "not enough for pnp" << std::endl;
                 return Eigen::Matrix4d::Identity();
@@ -616,6 +616,9 @@ namespace simulator
                 Vec3 point_in_map = epit->second;
                 if (point_in_map.isZero())
                     continue;
+                double point_distance = point_in_map.norm();
+                if (point_distance < 0.1)
+                    assert(0 == 1);
                 for (size_t j = 0; j < points_curr.size(); j++)
                 {
 
@@ -730,7 +733,7 @@ namespace simulator
                 {
                     // fuse
                     // TODO: (weights)
-                    point_in_w = (point_in_w + new_mappoint) / 2;
+                    point_in_w = (0.8 * point_in_w + 0.2 * new_mappoint);
                     local_map[curr_point_id] = point_in_w;
                 }
             }
@@ -786,11 +789,11 @@ namespace simulator
 
                     Vec3 mid_point = (new_endpoints.col(0) + new_endpoints.col(1)) / 2;
                     // from 1 to 0
-                    Vec3 direction_w = (new_endpoints.col(0) - new_endpoints.col(1)).normalized();
+                    Vec3 direction_w = (line_in_w.col(0) - line_in_w.col(1)).normalized();
                     if (direction_w.dot(new_direction) > 0.85)
-                        direction_w = (direction_w + new_direction).normalized();
+                        direction_w = (0.8 * direction_w + 0.2 * new_direction).normalized();
                     else if (direction_w.dot(new_direction) < -0.85)
-                        direction_w = (direction_w - new_direction).normalized();
+                        direction_w = (0.8 * direction_w - 0.2 * new_direction).normalized();
 
                     Vec3 direc_mid_s = mid_point - new_endpoints.col(1);
                     local_map[curr_line_id].col(1) = mid_point - (direc_mid_s.dot(direction_w)) * direction_w;
@@ -932,8 +935,11 @@ namespace simulator
             for(auto mit=local_mappoints_.begin(); mit!=local_mappoints_.end(); mit++)
             {
                 int mappoint_id = mit->first;
-                // if(mit->second ==Vec3::Zero())
-                //     continue;
+                if (mit->second == Vec3::Zero())
+                    continue;
+                double point_distance = mit->second.norm();
+                if (point_distance < 0.1)
+                    continue;
                 mappoints[mappoint_id] = mit->second;
             }
         }
@@ -999,6 +1005,10 @@ namespace simulator
             for(auto mit=local_maplines_.begin(); mit!=local_maplines_.end(); mit++)
             {
                 int mapline_id = mit->first;
+
+                double line_length = (mit->second.col(0) - mit->second.col(1)).norm();
+                if (line_length < 0.1)
+                    continue;
                 maplines[mapline_id] = mit->second;
             }
         }
@@ -1085,9 +1095,9 @@ namespace simulator
             }
             cv::namedWindow("2D Viewer", cv::WINDOW_NORMAL);
             cv::imshow("2D Viewer", img);
-            cv::waitKey(int(50 / mTrackSpeed));
+            // cv::waitKey(int(50 / mTrackSpeed));
             // if (cv::waitKey() == 27)
-            //     cv::imwrite(std::to_string(frame_idx) + ".png", img);
+            cv::imwrite(std::to_string(frame_idx) + ".png", img);
         }
 
         void DrawFeatures(std::map<int, std::pair<Vec3, Eigen::Vector2d>> &vec_data_pnp,

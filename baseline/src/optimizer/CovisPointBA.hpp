@@ -62,6 +62,9 @@ namespace simulator
                     //     std::cout << "mp_id:" << mp_id << "," << opti_para.mappoints.size() << std::endl;
                     if (opti_para.mappoints[mp_id] == Vec3::Zero())
                         continue;
+                    double point_distance = opti_para.mappoints[mp_id].norm();
+                    if (point_distance < 0.1)
+                        assert(0 == 1);
                     Para_Point_Feature[mp_id][0] = mp->second(0);
                     Para_Point_Feature[mp_id][1] = mp->second(1);
                     Para_Point_Feature[mp_id][2] = mp->second(2);

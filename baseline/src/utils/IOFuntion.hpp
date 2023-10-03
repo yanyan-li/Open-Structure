@@ -356,12 +356,14 @@ namespace simulator
       {
         std::vector<std::string> words;
         boost::split(words, line, boost::is_any_of(" "), boost::token_compress_on);
-        std::cout << words[0] << std::endl;
         std::map<int, int> asso_i;
         if (words[0].compare("MappointFrameAsso:") == 0)
         {
           int point_id = boost::lexical_cast<double>(words[1]);
           int frame_id = boost::lexical_cast<double>(words[2]);
+
+          // std::cout << "boost::lexical_cast<double>(words[1])"
+          //           << boost::lexical_cast<double>(words[1]) << "," << point_id << std::endl;
           double u = boost::lexical_cast<double>(words[3]);
           double v = boost::lexical_cast<double>(words[4]);
           // TODO: Yanyan depth
@@ -381,7 +383,7 @@ namespace simulator
       {
         std::vector<std::string> words;
         boost::split(words, line, boost::is_any_of(" "), boost::token_compress_on);
-        std::cout << words[0] << std::endl;
+        // std::cout << words[0] << std::endl;
         std::map<int, int> asso_i;
         if (words[0].compare("MaplineFrameAsso:") == 0)
         {
