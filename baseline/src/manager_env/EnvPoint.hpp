@@ -175,7 +175,9 @@ namespace simulator
         }
 
         //
-        void AddObservation(std::map<int /*frame_id*/, Mat4> keyframes_Twcs, std::vector<std::pair<int /*point_id*/, int /*frame_id*/>> &associate, bool add_noise_to_meas)
+        void AddObservation(std::map<int /*frame_id*/, Mat4> keyframes_Twcs,
+                            std::vector<std::pair<int /*point_id*/, int /*frame_id*/>> &associate,
+                            bool add_noise_to_meas)
         {
             for (auto asso_i : associate)
             {
@@ -204,7 +206,6 @@ namespace simulator
                     double v = trajec_->cam_intri.fy * pos_in_i(1) / depth_in_i + trajec_->cam_intri.cy;
                     if (u < 0 || u > trajec_->cam_intri.width || v < 0 || v > trajec_->cam_intri.height)
                         continue;
-                    // std::cout<< depth_in_i<< ", "<<    trajec_->cam_intri.width <<std::endl;
 
                     // the i-th kf detects the env_point
                     Vec3 pixel_d_coord;
@@ -234,7 +235,7 @@ namespace simulator
                     if (z <= 0.01)
                         continue;
 
-#ifdef __DEBUG__
+#ifdef __DEBUG__OFF
                     std::cout
                         << ">>>> in the " << i << "th frame, of total " << keyframes_Twcs.size() << "frames:" << std::endl;
                     std::cout << "groundtruth uv-d:" << u << "," << v << "," << depth_in_i << std::endl;

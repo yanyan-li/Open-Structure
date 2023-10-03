@@ -427,7 +427,7 @@ class EnvLine
     }
 
     void AddObservation(std::map<int /*frame_id*/, Mat4 /*frame_pose*/> keyframes_Twcs,
-                        std::vector<std::pair<int /*point_id*/, Eigen::Matrix<double, 7, 1> /*frame_id*/>> &associate,
+                        std::vector<std::pair<int /*line_id*/, Eigen::Matrix<double, 7, 1> /*frame_id*/>> &associate,
                         bool add_noise_to_meas) // TODO: It's better to use frame_id and frame_pose, rather than i;
     {
         for (auto asso_i : associate)
@@ -435,6 +435,7 @@ class EnvLine
             int line_id = asso_i.first;
             if (num_id_ == line_id)
             {
+                // std::cout << "num_id_" << num_id_ << std::endl;
                 int i = asso_i.second[0];
                 auto Twc = keyframes_Twcs[i];
                 Mat4 Tcw = Twc.inverse();
@@ -449,6 +450,27 @@ class EnvLine
                 Vec2 depth_in_i;
                 // in the camera coordinate
                 pos_in_i = Rcw * pos_world_ + tcw;
+
+#if __DEBUG_OFF__
+                Eigen::Vector3d P_s;
+                double x_s =
+                    asso_i.second[3] * (asso_i.second[1] - traject_->cam_intri.cx) / traject_->cam_intri.fx;
+                double y_s =
+                    asso_i.second[3] * (asso_i.second[2] - traject_->cam_intri.cy) / traject_->cam_intri.fy;
+                double z_s = asso_i.second[3];
+                P_s << x_s, y_s, z_s;
+
+                Eigen::Vector3d P_e;
+                double x_e =
+                    asso_i.second[6] * (asso_i.second[4] - traject_->cam_intri.cx) / traject_->cam_intri.fx;
+                double y_e =
+                    asso_i.second[6] * (asso_i.second[5] - traject_->cam_intri.cy) / traject_->cam_intri.fy;
+                double z_e = asso_i.second[6];
+                P_e << x_e, y_e, z_e;
+
+                std::cout << "test:" << (pos_in_i.col(0) - pos_in_i.col(1)).normalized() << "," << (P_s - P_e).normalized() << std::endl;
+
+#endif
 
                 Mat32 uvd_out = Mat32::Zero();
                 uvd_out.block(0, 0, 3, 1) << asso_i.second[1], asso_i.second[2], asso_i.second[3];
@@ -465,13 +487,14 @@ class EnvLine
                     pixel_d_coord(0, 0) += noise_x;
                     pixel_d_coord(1, 0) += noise_y;
                     // pixel_d_coord(2, 0) += noise_z;
-                    std::cout << "z-noise" << pixel_d_coord(2, 0);
+                    // std::cout << "z-noise" << pixel_d_coord(2, 0);
                     pixel_d_coord(2, 0) = 35130 / (35130 / (pixel_d_coord(2, 0) + noise_z) + 0.5 + 0.5);
-                    std::cout << "," << pixel_d_coord(2, 0) << std::endl;
+                    // std::cout << "," << pixel_d_coord(2, 0) << std::endl;
                     double x_s =
                         pixel_d_coord(2, 0) * (pixel_d_coord(0, 0) - traject_->cam_intri.cx) / traject_->cam_intri.fx;
                     double y_s =
                         pixel_d_coord(2, 0) * (pixel_d_coord(1, 0) - traject_->cam_intri.cy) / traject_->cam_intri.fy;
+                    
                     meas_3d(0, 0) = x_s;
                     meas_3d(1, 0) = y_s;
                     meas_3d(2, 0) = pixel_d_coord(2, 0);
