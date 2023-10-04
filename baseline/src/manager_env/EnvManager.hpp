@@ -698,72 +698,10 @@ namespace simulator
                 BuildSpherePoints();
                 return;
             }
-
-            // for (int id = 0; id < env_para_.vert_points_; id++)
-            // {
-            //     simulator::EnvPoint *ptr_ep = new simulator::EnvPoint(id, ptr_robot_trajectory_); // MapPoint(id, ptr_robot_trajectory_);
-            //     // EnvPoints
-            //     if (id < 0.25 * env_para_.vert_points_)                                       // vertical-left
-            //         ptr_ep->GenerateEnvPoint(env_length, -env_width, env_height, "vertical-left"); // left side of the wall
-            //         // int i =0;
-            //     else if (id < 0.5 * env_para_.vert_points_)
-            //         ptr_ep->GenerateEnvPoint(-env_length, env_width, env_height, "vertical-left"); // right side
-            //     else if (id < 0.75 * env_para_.vert_points_)
-            //         ptr_ep->GenerateEnvPoint(env_length, env_width, -env_height, "vertical-right"); // front side
-            //     else if (id < env_para_.vert_points_)
-            //         ptr_ep->GenerateEnvPoint(-env_length, env_width, env_height, "vertical-right"); // back side
-
-            //     ptr_ep->AddObservation(ptr_robot_trajectory_->groundtruth_traject_id_Twc_, b_add_noise_to_meas);
-
-            //     for (auto ob = ptr_ep->obs_frame_pos_.begin(), ob_end = ptr_ep->obs_frame_pos_.end(); ob != ob_end; ob++)
-            //     {
-            //         int frame_id = ob->first;
-            //         Vec3 pos_in_cam = ob->second;
-            //         asso_frameid_epid_[frame_id].push_back(std::make_pair(id, pos_in_cam));
-            //     }
-
-            //     if(ptr_ep->obs_frame_pos_.size()>0)
-            //     {
-            //         // association
-            //         asso_epid_frameid_pixeld_[id] = ptr_ep->obs_frame_pixel_;
-            //         asso_epid_frameid_pos_[id] = ptr_ep->obs_frame_pos_;
-            //     }
-            //     // gt
-            //     vec_points_.push_back(ptr_ep->pos_world_);
-            //     vec_epid_pos_w_.push_back(std::make_pair(ptr_ep->num_id_, ptr_ep->pos_world_)); // after checking
-            // }
         }
 
         void BuildPublicLines()
         {
-            // std::vector<Eigen::Matrix<double, 7, 1>> maplines;
-            // IO::ReadPublicLineClouds(envline_path_, maplines);
-            // for (int id = 0; id < maplines.size(); id++)
-            // {
-            //     int set_id = -1;
-            //     simulator::EnvLine *ptr_ml = new simulator::EnvLine(id, ptr_robot_trajectory_);
-            //     ptr_ml->GenerateEnvLine(maplines[id]);
-            //     set_id = ptr_ml->vanishing_direction_type_;
-
-            //     ptr_ml->AddObservation(ptr_robot_trajectory_->groundtruth_traject_id_Twc_, b_add_noise_to_meas);
-            //     for (auto ob = ptr_ml->obs_frameid_linepos_.begin(), ob_end = ptr_ml->obs_frameid_linepos_.end(); ob != ob_end; ob++)
-            //     {
-            //         int frame_id = ob->first;
-            //         Mat32 pos_in_cam = ob->second;
-            //         asso_frameid_elid_[frame_id].push_back(std::make_pair(id, pos_in_cam));
-            //     }
-            //     vec_lines_.push_back(ptr_ml->pos_world_);
-
-            //     // association
-            //     // assert(set_id>0);
-            //     if (set_id > 0)
-            //         asso_paralineid_elids_[set_id].push_back(id);
-            //     asso_elid_frameid_pos_[id] = ptr_ml->obs_frameid_linepos_;
-            //     asso_elid_frameid_pixeld_[id] = ptr_ml->obs_frameid_linepixel_;
-            //     // gt
-            //     vec_elid_pos_w_.push_back(std::make_pair(ptr_ml->num_id_, ptr_ml->pos_world_));
-            // }
-
             std::vector<Eigen::Matrix<double, 7, 1>> maplines;
             IO::ReadPublicLineClouds(envline_path_, maplines);
             std::vector<std::pair<int, Eigen::Matrix<double, 7, 1>>> asso_elid_frameid;
@@ -802,6 +740,36 @@ namespace simulator
                 // gt
                 vec_lines_.push_back(ptr_ml->pos_world_);
                 vec_elid_pos_w_.push_back(std::make_pair(ptr_ml->num_id_, ptr_ml->pos_world_));
+            }
+        }
+
+        void BuildPublicParalines()
+        {
+            std::map<int, Eigen::Matrix<double, 6, 1>> maplines;
+            IO::ReadPublicLineClouds(envline_path_, maplines);
+            std::vector<std::pair<int, Eigen::Matrix<double, 7, 1>>> asso_elid_frameid;
+            std::vector<std::pair<int, std::vector<int>>> asso_vdid_lineids;
+            IO::ReadPublicLineAssociation(associate_path_, asso_elid_frameid);
+            IO::ReadPublicParalineAssociation(associate_path_, asso_vdid_lineids);
+
+            for (auto asso_i : asso_vdid_lineids)
+            {
+                int vd_id = asso_i.first;
+                for (int i = 0; i < asso_i.second.size(); i++)
+                {
+                    Eigen::Matrix<double, 6, 1> ml = maplines[asso_i.second[i]];
+                    Eigen::Vector3d direct = (ml.head(3) - ml.tail(3)).normalized();
+
+                    for (int j = i + 1; j < asso_i.second.size(); j++)
+                    {
+                        Eigen::Matrix<double, 6, 1> ml_j = maplines[asso_i.second[i]];
+                        Eigen::Vector3d direct_j = (ml_j.head(3) - ml_j.tail(3)).normalized();
+                        double distance = direct.transpose() * direct_j;
+                        if (abs(distance) < 0.98)
+
+                            std::cout << "angle:" << distance << std::endl;
+                    }
+                }
             }
         }
 

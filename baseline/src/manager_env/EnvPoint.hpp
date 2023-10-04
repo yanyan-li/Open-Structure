@@ -200,7 +200,11 @@ namespace simulator
 
                     // condition 1: positive depth
                     if (depth_in_i <= 0.01)
-                        continue; // backside of the camera
+                    {
+                        std::cout << depth_in_i << "mpid:" << num_id_ << "frame_id:" << i << std::endl;
+                        assert(1 == 0); // backside of the camera
+                    }
+
                     // condions 2: inside of the image  (x,y,1)  ---> (u-cx)/fx = x
                     double u = trajec_->cam_intri.fx * pos_in_i(0) / depth_in_i + trajec_->cam_intri.cx;
                     double v = trajec_->cam_intri.fy * pos_in_i(1) / depth_in_i + trajec_->cam_intri.cy;
@@ -233,7 +237,7 @@ namespace simulator
 
                     // valid measurements checking
                     if (z <= 0.01)
-                        continue;
+                        assert(1 == 0);
 
 #ifdef __DEBUG__OFF
                     std::cout

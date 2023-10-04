@@ -344,6 +344,9 @@ class EnvLine
 
             if (!detected)
                 continue;
+            // remove short lines
+            if ((uvd_out.block(0, 0, 2, 1) - uvd_out.block(0, 1, 2, 1)).norm() < 5)
+                continue;
             // std::cout << "old line:" << u_s << "," << v_s << "," << depth_s << ";" << u_e << "," << v_e << "," << depth_e << std::endl;
             // std::cout << "new line:" << uvd_out.col(0) << ";" << uvd_out.col(1) << std::endl;
 
@@ -370,12 +373,6 @@ class EnvLine
             Vec3 meas_3d_coord_s, meas_3d_coord_e;
 
             Mat32 pixel_d_coord;
-
-            // AddNoise(pixel_d_coord_s, meas_3d_coord_s);
-            // AddNoise(pixel_d_coord_e, meas_3d_coord_e);
-            // pixel_d_coord.block(0, 0, 3, 1) = pixel_d_coord_s;
-            // pixel_d_coord.block(0, 1, 3, 1) = pixel_d_coord_e;
-            // obs_frameid_linepixel_[i] = pixel_d_coord;
 
             // For 3D lines
             Mat32 meas_3d_in_i; // endpoints representation
@@ -469,13 +466,12 @@ class EnvLine
                 P_e << x_e, y_e, z_e;
 
                 std::cout << "test:" << (pos_in_i.col(0) - pos_in_i.col(1)).normalized() << "," << (P_s - P_e).normalized() << std::endl;
-
 #endif
-
                 Mat32 uvd_out = Mat32::Zero();
                 uvd_out.block(0, 0, 3, 1) << asso_i.second[1], asso_i.second[2], asso_i.second[3];
                 uvd_out.block(0, 1, 3, 1) << asso_i.second[4], asso_i.second[5], asso_i.second[6];
-
+                if ((uvd_out.block(0, 0, 2, 1) - uvd_out.block(0, 1, 2, 1)).norm() < 5)
+                    continue;
                 auto AddNoise = [&](Vec3 &pixel_d_coord, Vec3 &meas_3d)
                 {
                     double noise_x, noise_y, noise_z;
@@ -516,10 +512,12 @@ class EnvLine
                 {
                     AddNoise(pixel_d_coord_s, meas_3d_coord_s);
                     AddNoise(pixel_d_coord_e, meas_3d_coord_e);
+                    meas_3d_in_i.block(0, 0, 3, 1) = meas_3d_coord_s;
+                    meas_3d_in_i.block(0, 1, 3, 1) = meas_3d_coord_e;
                 }
 
-                meas_3d_in_i.block(0, 0, 3, 1) = meas_3d_coord_s;
-                meas_3d_in_i.block(0, 1, 3, 1) = meas_3d_coord_e;
+                if (meas_3d_coord_s.z() < 0.01 || meas_3d_coord_s.z() < 0.01)
+                    assert(1 == 0);
 
                 pixel_d_coord.block(0, 0, 3, 1) = pixel_d_coord_s;
                 pixel_d_coord.block(0, 1, 3, 1) = pixel_d_coord_e;
@@ -536,7 +534,6 @@ class EnvLine
                 std::cout << "noisy endpoints in cam:" << meas_3d_in_i(0, 0) << "," << meas_3d_in_i(1, 0) << "," << meas_3d_in_i(2, 0) << ";"
                           << meas_3d_in_i(0, 1) << "," << meas_3d_in_i(1, 1) << "," << meas_3d_in_i(2, 1) << std::endl;
 #endif
-
                 if (add_noise_to_meas)
                     obs_frameid_linepos_[i] = meas_3d_in_i;
                 else
