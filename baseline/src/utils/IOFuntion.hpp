@@ -295,7 +295,8 @@ namespace simulator
      * @param filename
      * @param pts
      */
-    void ReadPublicPointClouds(const std::string &filename, std::vector<std::pair<int, Eigen::Vector3d>> &pts)
+    void ReadPublicPointClouds(const std::string &filename,
+                               std::vector<std::pair<int, Eigen::Vector3d>> &pts)
     {
       std::ifstream file(filename);
       std::string line;
@@ -303,14 +304,12 @@ namespace simulator
       {
         std::vector<std::string> words;
         boost::split(words, line, boost::is_any_of(" "), boost::token_compress_on);
-        // std::cout<<words[0]<<std::endl;
         Eigen::Vector3d pt = Eigen::Vector3d::Zero();
         int mp_id = boost::lexical_cast<int>(words[0]);
-
         pt.x() = boost::lexical_cast<double>(words[1]);
         pt.y() = boost::lexical_cast<double>(words[2]);
         pt.z() = boost::lexical_cast<double>(words[3]);
-        // std::cout << "pt.x()" << pt.x() << pt.y() << std::endl;
+
         pts.push_back(std::make_pair(mp_id, pt));
       }
       file.close();
@@ -347,6 +346,31 @@ namespace simulator
       file.close();
     }
 
+    void ReadPublicLineClouds(const std::string &filename, std::map<int, Eigen::Matrix<double, 6, 1>> &maplines)
+    {
+      std::cout << std::endl
+                << "\033[0;33m[Venom Simulator Printer] Read Line Landmarks from " << filename << ".\033[0m" << std::endl;
+
+      std::ifstream file(filename);
+      std::string line;
+      while (std::getline(file, line))
+      {
+        std::vector<std::string> words;
+        boost::split(words, line, boost::is_any_of(" "), boost::token_compress_on);
+        // std::cout<<words[0]<<std::endl;
+        Eigen::Matrix<double, 6, 1> paraline = Eigen::Matrix<double, 6, 1>::Zero();
+        int ml_id = boost::lexical_cast<double>(words[0]);
+        paraline(0) = boost::lexical_cast<double>(words[1]);
+        paraline(1) = boost::lexical_cast<double>(words[2]);
+        paraline(2) = boost::lexical_cast<double>(words[3]);
+        paraline(3) = boost::lexical_cast<double>(words[4]);
+        paraline(4) = boost::lexical_cast<double>(words[5]);
+        paraline(5) = boost::lexical_cast<double>(words[6]);
+        maplines[ml_id] = paraline;
+      }
+      file.close();
+    }
+
     void ReadPublicPointAssociation(const std::string &filename,
                                     std::vector<std::pair<int, int>> &asso_ptid_frame_id)
     {
@@ -361,13 +385,8 @@ namespace simulator
         {
           int point_id = boost::lexical_cast<double>(words[1]);
           int frame_id = boost::lexical_cast<double>(words[2]);
-
-          // std::cout << "boost::lexical_cast<double>(words[1])"
-          //           << boost::lexical_cast<double>(words[1]) << "," << point_id << std::endl;
           double u = boost::lexical_cast<double>(words[3]);
           double v = boost::lexical_cast<double>(words[4]);
-          // TODO: Yanyan depth
-
           asso_ptid_frame_id.push_back(std::make_pair(point_id, frame_id));
         }
       }
@@ -406,6 +425,32 @@ namespace simulator
       file.close();
     }
 
+    void ReadPublicParalineAssociation(const std::string &filename,
+                                       std::vector<std::pair<int /*vd_id*/, std::vector<int> /*paraline_ids*/>> &asso_paraline)
+    {
+      std::ifstream file(filename);
+      std::string line;
+      while (std::getline(file, line))
+      {
+        std::vector<std::string> words;
+        boost::split(words, line, boost::is_any_of(" "), boost::token_compress_on);
+        // std::cout << words[0] << std::endl;
+        if (words[0].compare("ParalineMaplineAsso:") == 0)
+        {
+          int vd_id = boost::lexical_cast<int>(words[1]);
+          int mls_num = boost::lexical_cast<int>(words[2]);
+          // std::cout<<"s"<<mls_num<<std::endl;
+          std::vector<int> paraline_ids;
+          paraline_ids.clear();
+          for (int i = 0; i < mls_num; i++)
+          {
+            int ml_id = boost::lexical_cast<int>(words[3 + i]);
+            paraline_ids.push_back(ml_id);
+          }
+          asso_paraline.push_back(std::make_pair(vd_id, paraline_ids));
+        }
+      }
+    }
     void ReadVENOMFactorGraph(const std::string &file_name,
                               simulator::OptimizationManager &paras)
     {
@@ -535,7 +580,7 @@ namespace simulator
       return true;
     }
 
-    void SaveFramePredictedTrajectoryLovelyTUM(const std::string &filename, std::map<int /*frame_id*/, Eigen::Matrix4d /*frame_pose*/> &vec_Twcs)
+    void SaveFramePredictedTrajectoryTUM(const std::string &filename, std::map<int /*frame_id*/, Eigen::Matrix4d /*frame_pose*/> &vec_Twcs)
     {
       std::cout << "\033[0;33m[Venom Simulator Printer] Saving keyframe trajectory to " << filename << ".\033[0m" << std::endl;
 
@@ -762,12 +807,10 @@ namespace simulator
         // record those parameters
         std::ofstream file(file_name);
         file << "The settings of the Venom Simulator system are saved in this file: " << std::endl
-              << "frame_num_:" << env_para.frame_num_ << std::endl
-              << "traject_type_:" << env_para.traject_type_ << std::endl
-              << "vert_lines_:" << env_para.vert_lines_ << std::endl
-              << "horiz_lines_:" << env_para.horiz_lines_ << std::endl
-              << "vert_points_:" << env_para.vert_points_ << std::endl
-              << "horiz_points_:" << env_para.horiz_points_ << std::endl;
+             << "frame_num_:" << env_para.frame_num_ << std::endl
+             << "traject_type_:" << env_para.traject_type_ << std::endl
+             << "lines_:" << env_para.vert_lines_ << std::endl
+             << "points_:" << env_para.vert_points_ << std::endl;
         // TODO: intransic matrix
         file.close();
     }
