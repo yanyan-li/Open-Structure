@@ -58,8 +58,7 @@ namespace simulator
                 for(auto mp = opti_para.mappoints.begin(); mp!= opti_para.mappoints.end(); mp++)
                 {
                     int mp_id = mp->first;
-                    // if (mp_id > opti_para.mappoints.size())
-                    //     std::cout << "mp_id:" << mp_id << "," << opti_para.mappoints.size() << std::endl;
+
                     if (opti_para.mappoints[mp_id] == Vec3::Zero())
                         continue;
                     double point_distance = opti_para.mappoints[mp_id].norm();
