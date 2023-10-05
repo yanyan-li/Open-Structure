@@ -330,6 +330,8 @@ namespace simulator
             // generate mappoints based on walls
             for (int id = 0; id < env_para_.vert_points_; id++)
             {
+                std::cout << "dsfrea" << id << "," << env_para_.vert_points_ << std::endl;
+
                 simulator::EnvPoint *ptr_ep = new simulator::EnvPoint(id, ptr_robot_trajectory_); // MapPoint(id, ptr_robot_trajectory_);
 
                 int i = id % planes.size();
@@ -403,7 +405,7 @@ namespace simulator
             }
 
             // generate points
-            for (int id = 0; id < env_para_.vert_lines_ + env_para_.horiz_lines_ /*500 map points*/; id++)
+            for (int id = 0; id < env_para_.vert_lines_ /*500 map points*/; id++)
             {
                 int i = id % planes.size();
                 Eigen::Vector3d plane_max_bounds = Eigen::Vector3d::Zero();
@@ -445,6 +447,8 @@ namespace simulator
 
                 // gt
                 vec_lines_.push_back(ptr_ml->pos_world_);
+                vec_lines_structlabel_.push_back(ptr_ml->vanishing_direction_type_);
+
                 vec_elid_pos_w_.push_back(std::make_pair(ptr_ml->num_id_, ptr_ml->pos_world_));
             }
         }
@@ -476,7 +480,7 @@ namespace simulator
             }
 
             // generate points
-            for (int id = 0; id < env_para_.vert_lines_ + env_para_.horiz_lines_ /*500 map points*/; id++)
+            for (int id = 0; id < env_para_.vert_lines_ /*500 map points*/; id++)
             {
                 int i = id % planes.size();
                 Eigen::Vector3d plane_max_bounds = Eigen::Vector3d::Zero();
@@ -524,6 +528,8 @@ namespace simulator
 
                 // gt
                 vec_lines_.push_back(ptr_ml->pos_world_);
+                vec_lines_structlabel_.push_back(ptr_ml->vanishing_direction_type_);
+
                 vec_elid_pos_w_.push_back(std::make_pair(ptr_ml->num_id_, ptr_ml->pos_world_));
             }
         }
@@ -555,7 +561,7 @@ namespace simulator
             }
 
             // generate points
-            for (int id = 0; id < env_para_.vert_lines_ + env_para_.horiz_lines_ /*500 map points*/; id++)
+            for (int id = 0; id < env_para_.vert_lines_ /*500 map points*/; id++)
             {
                 int i = id % planes.size();
                 Eigen::Vector3d plane_max_bounds = Eigen::Vector3d::Zero();
@@ -597,6 +603,8 @@ namespace simulator
 
                 // gt
                 vec_lines_.push_back(ptr_ml->pos_world_);
+                vec_lines_structlabel_.push_back(ptr_ml->vanishing_direction_type_);
+
                 vec_elid_pos_w_.push_back(std::make_pair(ptr_ml->num_id_, ptr_ml->pos_world_));
             }
         }

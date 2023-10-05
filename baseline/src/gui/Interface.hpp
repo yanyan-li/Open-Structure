@@ -574,7 +574,7 @@ namespace simulator
                     if (menuShowLine)
                     {
                         Eigen::Vector3d gt_color(1.0, 0.0, 0.0);
-                        DrawMapLine(lines_gt_, gt_color);
+                        DrawGTMapLine(lines_gt_, gt_color);
                     }
                     if (menuShowPoint)
                     {
@@ -678,7 +678,7 @@ namespace simulator
                     if (menuShowLine)
                     {
                         Eigen::Vector3d color(1.0, 0.0, 0.0);
-                        DrawMapLine(lines_gt_, color);
+                        DrawGTMapLine(lines_gt_, color);
                     }
                     if (menuShowPoint)
                     {
@@ -997,6 +997,8 @@ namespace simulator
 
             if (read_open_structure)
             {
+                std::cout << "effewa" << std::endl;
+
                 ptr_env_manager_->BuildPublicPoints();
                 ptr_env_manager_->GetEnvPoints(points_gt_); // for visualizaiton
                 ptr_env_manager_->BuildPublicLines();
@@ -1009,12 +1011,15 @@ namespace simulator
             }
             else // user design
             {
+                std::cout << "ewer4g" << std::endl;
+
                 // env_points
                 ptr_env_manager_->BuildEnvPoints();         // build ground truth points
                 ptr_env_manager_->GetEnvPoints(points_gt_); // for visualizaiton
                 // env_lines
                 ptr_env_manager_->BuildEnvLines();        // build ground truth lines
                 ptr_env_manager_->GetEnvLines(lines_gt_); // for visualizaiton
+                ptr_env_manager_->GetEnvLinesStructLabel(lines_structlabel_gt_);
             }
         }
 
@@ -1024,7 +1029,7 @@ namespace simulator
          * @param lines
          * @param color
          */
-        void DrawMapLine(std::vector<Mat32> &lines, Eigen::Vector3d &color)
+        void DrawGTMapLine(std::vector<Mat32> &lines, Eigen::Vector3d &color)
         {
             glLineWidth(4.0);
             glBegin(GL_LINES);
@@ -1040,6 +1045,22 @@ namespace simulator
                               simulator::color_table[(lines_structlabel_gt_[i] + 1) % 10][2]);
                 else
                     glColor3f(0.3, 0.3, 0.3); // non-struct
+                Vec3 line0 = lines[i].block(0, 0, 3, 1);
+                Vec3 line1 = lines[i].block(0, 1, 3, 1);
+                glVertex3f(line0(0), line0(1), line0(2));
+                glVertex3f(line1(0), line1(1), line1(2));
+            }
+            glEnd();
+        }
+
+        void DrawMapLine(std::vector<Mat32> &lines, Eigen::Vector3d &color)
+        {
+            glLineWidth(4.0);
+            glBegin(GL_LINES);
+
+            glColor3f(color(0), color(1), color(2)); // non-struct
+            for (int i = 0; i < lines.size(); i++)
+            {
                 Vec3 line0 = lines[i].block(0, 0, 3, 1);
                 Vec3 line1 = lines[i].block(0, 1, 3, 1);
                 glVertex3f(line0(0), line0(1), line0(2));
