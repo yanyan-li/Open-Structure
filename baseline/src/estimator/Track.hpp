@@ -46,9 +46,10 @@ namespace simulator
         std::vector<std::pair<int, Mat32>> vec_elid_pos_w_;
         std::map<int/*mappoint_id*/, Vec3/*posi_in_w*/> local_mappoints_;
         std::map<int/*maplines_id*/, Mat32/*posi_in_w*/> local_maplines_;
+        std::map<int /*envparaline_id*/, std::vector<int /*envline_id*/>> paralineid_elids_;
 
         // poses
-        std::vector<std::pair<int/*frame_id*/,  Eigen::Matrix4d/*frame_pose*/>> vec_localmap_Twc_;
+        std::vector<std::pair<int /*frame_id*/, Eigen::Matrix4d /*frame_pose*/>> vec_localmap_Twc_;
         std::vector<std::pair<int/*frame_id*/,  Eigen::Matrix4d/*frame_pose*/>> vec_vo_Twc_;
 
     public:
@@ -73,8 +74,9 @@ namespace simulator
               std::map<int /*frame_id*/, std::vector<std::pair<int /*ep_id*/, Vec3>>> &asso_frameid_epid, // noisy 3D in camera coordinate
               std::map<int /*envline_id*/, frame_line_meas> &asso_elid_frameid_pos,
               std::map<int /*envline_id*/, frame_line_meas> &asso_elid_frameid_pixeld,
+              std::map<int /*envparaline_id*/, std::vector<int /*envline_id*/>> asso_paralineid_elids_,
               std::map<int /*frame_id*/, std::vector<std::pair<int /*el_id*/, Mat32>>> &asso_frameid_elid, // noisy measurement
-              Trajectory *robot_trajectory) : robot_traject_(robot_trajectory)
+              Trajectory *robot_trajectory) : robot_traject_(robot_trajectory), paralineid_elids_(asso_paralineid_elids_)
         {
             obs_point_.clear();
             obs_line_.clear();
@@ -133,6 +135,7 @@ namespace simulator
                 int mapline_id = mit->first;
                 local_maplines_[mapline_id] = Mat32::Zero();
             }
+
             mbTrackOdometry = false;
             num_track_speed_ = 1;
         }
@@ -818,7 +821,7 @@ namespace simulator
         }
 
         void DrawMeasurements(std::vector<std::pair<int /*point_id*/, Vec3>> &points_curr,
-                              std::vector<std::pair<int /*point_id*/, Mat32>> &lines_curr,
+                              std::vector<std::pair<int /*line_id*/, Mat32>> &lines_curr,
                               int frame_idx)
         {
             bool b_show_feature_id = true;
@@ -854,9 +857,11 @@ namespace simulator
                 Eigen::Vector2d s_pixel_curr, e_pixel_curr;
                 GetPixelPosition(s_line_in_c, s_pixel_curr);
                 GetPixelPosition(e_line_in_c, e_pixel_curr);
-                cv::line(img, cv::Point(s_pixel_curr(0), s_pixel_curr(1)), cv::Point(e_pixel_curr(0), e_pixel_curr(1)), cv::Scalar(0, 0, 255), 2);
+                cv::Scalar color = cv::Scalar(0, 0, 255);
+                GetParallelLabel(ml_id, color);
+                cv::line(img, cv::Point(s_pixel_curr(0), s_pixel_curr(1)), cv::Point(e_pixel_curr(0), e_pixel_curr(1)), color, 2);
                 if (b_show_feature_id)
-                    cv::putText(img, std::to_string(ml_id), cv::Point(s_pixel_curr(0), s_pixel_curr(1)), font_face, font_scale, cv::Scalar(0, 0, 255), thickness, 8, 0);
+                    cv::putText(img, std::to_string(ml_id), cv::Point(s_pixel_curr(0), s_pixel_curr(1)), font_face, font_scale, color, thickness, 8, 0);
             }
             cv::namedWindow("2D Viewer", cv::WINDOW_NORMAL);
             cv::imshow("2D Viewer", img);
@@ -908,6 +913,27 @@ namespace simulator
             // cv::imshow("2D Viewer", img);
             // if (cv::waitKey() == 27)
             //     cv::imwrite(std::to_string(frame_idx) + ".png", img);
+        }
+
+        void GetParallelLabel(const int line_id, cv::Scalar &color_label)
+        {
+            bool skip = false;
+            for (auto para_group : paralineid_elids_)
+            {
+                int vd_id = para_group.first;
+                std::cout << "vd_id:" << vd_id << std::endl;
+                for (int i = 0; i < para_group.second.size(); i++)
+                {
+                    std::cout << "line_id:" << para_group.second[i] << ". this line:" << line_id << std::endl;
+                    if (para_group.second[i] == line_id)
+                    {
+                        color_label[0] = int(simulator::color_table[(vd_id + 1) % 10][0] * 255);
+                        color_label[1] = int(simulator::color_table[(vd_id + 1) % 10][1] * 255);
+                        color_label[2] = int(simulator::color_table[(vd_id + 1) % 10][2] * 255);
+                        return;
+                    }
+                }
+            }
         }
     };
 }

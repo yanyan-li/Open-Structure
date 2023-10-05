@@ -78,6 +78,7 @@ namespace simulator
         // gt 3D landmarks of the environment
         std::vector<Vec3> points_gt_;
         std::vector<Mat32> lines_gt_;
+        std::vector<int> lines_structlabel_gt_;
 
         pangolin::OpenGlRenderState s_cam;
         pangolin::View d_cam;
@@ -116,6 +117,7 @@ namespace simulator
             PageHomeSurface(venom_settings);
         }
 
+        // Page------------------> Home
         void PageHomeSurface(cv::FileStorage &venom_settings)
         {
             venom_settings["Evaluation.result_path"] >> root_path_;
@@ -154,7 +156,7 @@ namespace simulator
                 PageStartPrivatePipeline(venom_settings); // page for dealing with new environments
         }
 
-        // Page------------------> Public Dataset
+        // Page------------------> Optimization comparison
         void PageStartPublicPipeline(cv::FileStorage &venom_settings)
         {
             pangolin::CreatePanel("publicmenu").SetBounds(0.0, 1.0, 0.0, pangolin::Attach::Pix(UI_WIDTH));
@@ -587,11 +589,12 @@ namespace simulator
                     //---> point_line
                     // camera-landmark association
                     ptr_tracker_ = new simulator::Track(
-                        ptr_env_manager_->asso_epid_frameid_pos_, 
+                        ptr_env_manager_->asso_epid_frameid_pos_,
                         ptr_env_manager_->asso_epid_frameid_pixeld_,
-                        ptr_env_manager_->asso_frameid_epid_, 
+                        ptr_env_manager_->asso_frameid_epid_,
                         ptr_env_manager_->asso_elid_frameid_pos_,
                         ptr_env_manager_->asso_elid_frameid_pixeld_,
+                        ptr_env_manager_->asso_paralineid_elids_,
                         ptr_env_manager_->asso_frameid_elid_,
                         ptr_env_manager_->ptr_robot_trajectory_);
 
@@ -998,8 +1001,9 @@ namespace simulator
                 ptr_env_manager_->GetEnvPoints(points_gt_); // for visualizaiton
                 ptr_env_manager_->BuildPublicLines();
                 ptr_env_manager_->GetEnvLines(lines_gt_); // for visualizaiton
+                ptr_env_manager_->GetEnvLinesStructLabel(lines_structlabel_gt_);
 #if __TEST__OFF
-                // test
+                // test parallel
                 ptr_env_manager_->BuildPublicParalines();
 #endif
             }
@@ -1024,11 +1028,20 @@ namespace simulator
         {
             glLineWidth(4.0);
             glBegin(GL_LINES);
-            glColor3f(color(0), color(1), color(2));
-            for (const auto &Line : lines)
+
+            // for (const auto &Line : lines)
+            // {
+            // }
+            for (int i = 0; i < lines.size(); i++)
             {
-                Vec3 line0 = Line.block(0, 0, 3, 1);
-                Vec3 line1 = Line.block(0, 1, 3, 1);
+                if (lines_structlabel_gt_[i] >= 0)
+                    glColor3f(simulator::color_table[(lines_structlabel_gt_[i] + 1) % 10][0],
+                              simulator::color_table[(lines_structlabel_gt_[i] + 1) % 10][1],
+                              simulator::color_table[(lines_structlabel_gt_[i] + 1) % 10][2]);
+                else
+                    glColor3f(0.3, 0.3, 0.3); // non-struct
+                Vec3 line0 = lines[i].block(0, 0, 3, 1);
+                Vec3 line1 = lines[i].block(0, 1, 3, 1);
                 glVertex3f(line0(0), line0(1), line0(2));
                 glVertex3f(line1(0), line1(1), line1(2));
             }

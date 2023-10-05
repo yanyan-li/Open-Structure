@@ -1,18 +1,10 @@
-/*
- * @Author: liyanyan liyanyan@meta-bounds.com
- * @Date: 2023-01-14 10:20:27
- * @LastEditors: liyanyan liyanyan@meta-bounds.com
- * @LastEditTime: 2023-01-14 13:35:13
- * @FilePath: /ParaLine-main/src/util/UtilStruct.hpp
- * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
- */
-/*** 
+/***
  * @Author: yanyan-li yanyan.li.camp@gmail.com
- * @Date: 2022-11-11 14:46:00
- * @LastEditTime: 2023-07-29 16:31:35
+ * @Date: 2023-09-30 06:55:26
+ * @LastEditTime: 2023-10-05 03:23:24
  * @LastEditors: yanyan-li yanyan.li.camp@gmail.com
- * @Description: 
- * @FilePath: /1. RA-L2023/src/utils/UtilStruct.hpp
+ * @Description:
+ * @FilePath: /baseline/src/utils/UtilStruct.hpp
  */
 
 #ifndef __VENOM_SRC_UTIL_UtilStruct_HPP__
@@ -74,6 +66,18 @@ namespace simulator
         std::map<int /*kf_id*/, std::vector<int /*mappoint_id*/>> mp_obsers;
         std::map<int /*kf_id*/, std::vector<int /*mapline_id*/>> ml_obsers;
     };
+
+    double color_table[10][3] =
+        {{0.1f, 0.1f, 0.0f},
+         {0.3f, 0.3f, 0.5f},
+         {0.6f, 0.5f, 1.0f},
+         {0.9f, 0.7f, 0.9f},
+         {1.0f, 0.9f, 0.7f},
+         {0.1f, 0.7f, 0.5f},
+         {0.3f, 0.5f, 0.7f},
+         {0.6f, 0.3f, 0.3f},
+         {0.9f, 0.5f, 0.7f},
+         {0.1f, 0.8f, 0.6f}};
 }
 
 #endif // __VENOM_SRC_UTIL_UtilStruct_HPP__

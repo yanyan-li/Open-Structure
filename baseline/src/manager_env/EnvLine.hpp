@@ -276,7 +276,29 @@ class EnvLine
         else
             vanishing_direction_type_ = -1;
         vanishing_direction_ = (pos_world_.block(0, 0, 3, 1) - pos_world_.block(0, 1, 3, 1)).normalized();
-        length = (pos_world_.col(0)-pos_world_.col(1)).norm();
+        std::cout << "line_id: " << num_id_ << "," << vanishing_direction_ << std::endl;
+        length = (pos_world_.col(0) - pos_world_.col(1)).norm();
+    }
+
+    void GenerateStructLabel(std::vector<std::pair<int, std::vector<int>>> &asso_vdid_lineids)
+    {
+        bool skip = false;
+        for (auto para_group : asso_vdid_lineids)
+        {
+            int vd_id = para_group.first;
+            std::cout << "vd_id:" << vd_id << std::endl;
+            for (int i = 0; i < para_group.second.size(); i++)
+            {
+                std::cout << "line_id:" << para_group.second[i] << ". this line:" << num_id_ << std::endl;
+                if (para_group.second[i] == num_id_)
+                {
+                    vanishing_direction_type_ = vd_id;
+                    std::cout << "this line: " << num_id_ << " is labeled:" << vanishing_direction_type_ << std::endl;
+                    return;
+                }
+            }
+        }
+        vanishing_direction_type_ = -1;
     }
     /**
      * @brief reproject the 3D mapline to camera view, we than can obtain whether the mappoint can be detected or not.
