@@ -67,15 +67,18 @@ namespace simulator
         int horiz_points_;
         std::string root_path_;
 
+        // initial landmarks
         Eigen::Vector3d color_initial_;
         std::vector<Vec3> points_initial_;
         Eigen::Vector3d color_pl_initial_;
         std::vector<Mat32> lines_intial_;
+        // optimized landmarks
         std::map<int, Eigen::Vector3d> optimized_mappoints_;
         std::map<int, Mat32> optimized_maplines_;
-        // 3D landmarks of the environment
+        // gt 3D landmarks of the environment
         std::vector<Vec3> points_gt_;
         std::vector<Mat32> lines_gt_;
+        std::vector<int> lines_structlabel_gt_;
 
         pangolin::OpenGlRenderState s_cam;
         pangolin::View d_cam;
@@ -114,6 +117,7 @@ namespace simulator
             PageHomeSurface(venom_settings);
         }
 
+        // Page------------------> Home
         void PageHomeSurface(cv::FileStorage &venom_settings)
         {
             venom_settings["Evaluation.result_path"] >> root_path_;
@@ -147,13 +151,13 @@ namespace simulator
                 pangolin::FinishFrame();
             }
             if (wait_click == 1)
-                StartPublicPipeline(venom_settings);  // page for dealing with venom_sequence.txt
+                PageStartPublicPipeline(venom_settings); // page for dealing with venom_sequence.txt
             else if (wait_click == 2)
                 PageStartPrivatePipeline(venom_settings); // page for dealing with new environments
         }
 
-        // Page------------------> Public Dataset
-        void StartPublicPipeline(cv::FileStorage &venom_settings)
+        // Page------------------> Optimization comparison
+        void PageStartPublicPipeline(cv::FileStorage &venom_settings)
         {
             pangolin::CreatePanel("publicmenu").SetBounds(0.0, 1.0, 0.0, pangolin::Attach::Pix(UI_WIDTH));
             // public dataset: read g2o_file
@@ -177,12 +181,14 @@ namespace simulator
             // pangolin::Var<bool> menuPointBAGTSAM("publicmenu.CovisPointBA GTSAM", false, false);
             pangolin::Var<bool> menuPointBACeres("publicmenu.CovisPointBA", false, false);
             pangolin::Var<bool> menuPointLineBA("publicmenu.CovisPointLineBA", false, false);
-            // pangolin::Var<bool> menuPointLineBACE("publicmenu.CovisExtensImpliPointLineBA", false, false);
-            // pangolin::Var<bool> menuPointLineBACEEx("publicmenu.CovisExtensExpliPointLineBA", false, false);
 
-            pangolin::Var<bool> menuShowTrajectory("publicmenu.Show Trajectory", false, true);
+            pangolin::Var<bool> menuShowTrajectory("publicmenu.Show Initial Trajectory", false, true);
+            pangolin::Var<bool> menuShowInitialMP("publicmenu.Show Initial Points", false, true);
+            pangolin::Var<bool> menuShowInitialML("publicmenu.Show Initial Lines", false, true);
+
             pangolin::Var<bool> menuShowPoseGraphTrajectory("publicmenu.Show Optimized Trajectory", false, true);
-            pangolin::Var<bool> menuShowConnections("publicmenu.Show Connections", false, true);
+            pangolin::Var<bool> menuShowOptimizedMP("publicmenu.Show Optimized Points", false, true);
+            pangolin::Var<bool> menuShowOptimizedML("publicmenu.Show Optimized Lines", false, true);
             pangolin::Var<bool> menuShowCamera("publicmenu.Show Cameras", false, true);
 
             // 
@@ -193,18 +199,14 @@ namespace simulator
             bool click_input_data = true;
             bool click_start_optimize = true;
 
-            // bool click_show_connection = true;
-
             std::map<int, Mat4> Twcs_factorgraph;
             std::vector<Mat4> Twcs_posegraph;
             simulator::OptimizationManager venom_factorgraph;
 
+            std::vector<Vec3> points_refined;
+            std::vector<Mat32> lines_refined;
+
             IO::MapOfPoses poses;
-            IO::MapOfMapPoints map_points;
-            IO::MapOfMapLines map_lines;
-            IO::MapOfMapParaLines map_paralines;
-            IO::MapOfAssoPoints asso_mappoints;
-            IO::MapOfAssoLines asso_maplines;
 
             while(!pangolin::ShouldQuit())
             {
@@ -254,9 +256,6 @@ namespace simulator
                     menuStartInputPoseGraph.Detach();
                     prepare_optimization.Detach();
                     menuPoseGraphOptimization.Detach();
-                    // menuStartPoseGraphOptimization.Detach();
-                    // check menuStartInputFactorGraph
-
                     Eigen::Vector4d graph_size;
 
                     // 1. existed check
@@ -288,6 +287,40 @@ namespace simulator
                         click_input_factor_graph = false;
                         click_input_data = false;
                         menuShowTrajectory = true;
+                        for (auto mappoint : venom_factorgraph.mappoints)
+                            points_initial_.push_back(mappoint.second);
+                        for (auto mapline : venom_factorgraph.maplines)
+                            lines_intial_.push_back(mapline.second);
+                        for (auto &mit : venom_factorgraph.kfs)
+                            Twcs_.push_back(mit.second);
+                        menuShowInitialMP = true;
+                        menuShowInitialML = true;
+                        // std::cout << "sssss" << std::endl;
+                    }
+                }
+
+                {
+                    if (menuShowInitialML)
+                    {
+                        Eigen::Vector3d gt_color(0.6, 0.9, 0.4);
+                        DrawMapLine(lines_intial_, gt_color);
+                    }
+                    if (menuShowInitialMP)
+                    {
+                        Eigen::Vector3d gt_color(0.6, 0.9, 0.4);
+                        DrawMapPoint(points_initial_, gt_color);
+                    }
+
+                    if (menuShowOptimizedMP)
+                    {
+                        Eigen::Vector3d color(0.1, 0.5, 0.1);
+                        DrawMapPoint(points_refined, color);
+                    }
+
+                    if (menuShowOptimizedML)
+                    {
+                        Eigen::Vector3d color(0.1, 0.5, 0.1);
+                        DrawMapLine(lines_refined, color);
                     }
                 }
 
@@ -316,11 +349,15 @@ namespace simulator
                                   << std::endl;
 
                         click_start_optimize = false;
+                        for (auto &tws : Twcs_factorgraph)
+                            Twcs_true_.push_back(tws.second);
+                        for (auto mit = optimized_mappoints_.begin(); mit != optimized_mappoints_.end(); mit++)
+                        {
+                            points_refined.push_back(mit->second);
+                        }
                         // menuPointBAGTSAM.Detach();
                         menuPointBACeres.Detach();
                         menuPointLineBA.Detach();
-                        // menuPointLineBACE.Detach();
-                        // menuPointLineBACEEx.Detach();
                         IO::SaveFramePredictedTrajectoryTUM(root_path_ + "Point_BA.txt", Twcs_factorgraph);
                         IO::MapPointRecord(root_path_+"Point_Mappoint.txt", optimized_mappoints_);
                     }
@@ -340,6 +377,17 @@ namespace simulator
                                      "cameras. \033[0m"
                                   << std::endl;
                         click_start_optimize = false;
+                        for (auto &tws : Twcs_factorgraph)
+                            Twcs_true_.push_back(tws.second);
+                        for (auto mit = optimized_maplines_.begin(); mit != optimized_maplines_.end(); mit++)
+                        {
+                            lines_refined.push_back(mit->second);
+                        }
+                        for (auto mit = optimized_mappoints_.begin(); mit != optimized_mappoints_.end(); mit++)
+                        {
+                            points_refined.push_back(mit->second);
+                        }
+
                         // menuPointBAGTSAM.Detach();
                         menuPointBACeres.Detach();
                         menuPointLineBA.Detach();
@@ -349,149 +397,42 @@ namespace simulator
                         IO::MapPointRecord(root_path_+"PointLine_mappoint.txt", optimized_mappoints_);
                         IO::MapLineRecord(root_path_+"PointLine_mapline.txt", optimized_maplines_);
                     }
-                    // else if (menuPointLineBACE)
-                    // {
-
-                    //     simulator::optimizer::CovisPointParalineBA::optimizer(ptr_robot_trajectory_,
-                    //                                                                     venom_factorgraph,
-                    //                                                                     optimized_mappoints_,
-                    //                                                                     optimized_maplines_,
-                    //                                                                     Twcs_factorgraph);
-                    //     menuShowPoseGraphTrajectory = true;
-                    //     // menuShowOptimizedMapPoints = true;
-                    //     // menuShowOptimizedMapLines = true;
-                    //     std::cout << std::endl
-                    //               << "\033[0;35m[Venom Similator Printer] Optimize reconstructed landmarks and "
-                    //                  "cameras. \033[0m"
-                    //               << std::endl;
-                    //     click_start_optimize = false;
-                    //     // menuPointBAGTSAM.Detach();
-                    //     menuPointBACeres.Detach();
-                    //     menuPointLineBA.Detach();
-                    //     menuPointLineBACE.Detach();
-                    //     menuPointLineBACEEx.Detach();
-                    //     IO::SaveFramePredictedTrajectoryTUM(root_path_+"PointParaline_BA.txt", Twcs_factorgraph);
-                    //     IO::MapPointRecord(root_path_+"PointParaline_Mappoint.txt", optimized_mappoints_);
-                    //     IO::MapLineRecord(root_path_+"PointParaline_Mapline.txt", optimized_maplines_);
-                    // }
-                    // else if (menuPointLineBACEEx)
-                    // {
-
-                    //     simulator::optimizer::CovisExtensPointParalineBA::optimizer(ptr_robot_trajectory_,
-                    //                                                                     venom_factorgraph,
-                    //                                                                     optimized_mappoints_,
-                    //                                                                     optimized_maplines_,
-                    //                                                                     Twcs_factorgraph);
-                    //     menuShowPoseGraphTrajectory = true;
-                    //     // menuShowOptimizedMapPoints = true;
-                    //     // menuShowOptimizedMapLines = true;
-                    //     std::cout << std::endl
-                    //               << "\033[0;35m[Venom Similator Printer] Optimize reconstructed landmarks and "
-                    //                  "cameras. \033[0m"
-                    //               << std::endl;
-                    //     click_start_optimize = false;
-                    //     // menuPointBAGTSAM.Detach();
-                    //     menuPointBACeres.Detach();
-                    //     menuPointLineBA.Detach();
-                    //     menuPointLineBACE.Detach();
-                    //     menuPointLineBACEEx.Detach();
-                    //     IO::SaveFramePredictedTrajectoryTUM(root_path_+"PointParaline_JFG_BA.txt", Twcs_factorgraph);
-                    //     IO::MapPointRecord(root_path_+"PointParaline_JFG_Mappoint.txt", optimized_mappoints_);
-                    //     IO::MapLineRecord(root_path_+"PointParaline_JFG_Mapline.txt", optimized_maplines_);
-
-                    // }
                 }
 
                 if( menuShowPoseGraphTrajectory)
                 {
                     
                     std::vector<pangolin::OpenGlMatrix> MsTrue;
-                    DrawTrajectoryConnection(MsTrue, Twcs_posegraph, Vec3(0,1,1));
-                    if (menuShowCamera)
-                        DrawTrajectoryCamera(MsTrue, Vec3(0, 0, 1));
+                    if (Twcs_posegraph.size() > 0)
+                    {
+                        DrawTrajectoryConnection(MsTrue, Twcs_posegraph, Vec3(0, 1, 1));
+                        if (menuShowCamera)
+                            DrawTrajectoryCamera(MsTrue, Vec3(0, 0, 1));
+                    }
                 }
 
                 if (menuShowTrajectory)
                 {
                     std::vector<pangolin::OpenGlMatrix> MsTrue;
-                    if (!click_input_factor_graph)
+                    if (Twcs_.size() > 0)
                     {
-                        for (auto &mit : venom_factorgraph.kfs)
-                            Twcs_true_.push_back(mit.second);
+                        DrawTrajectoryConnection(MsTrue, Twcs_, Vec3(0.4, 0.1, 0.0));
+                        if (menuShowCamera)
+                            DrawTrajectoryCamera(MsTrue, Vec3(0, 0, 1));
                     }
-
-                    DrawTrajectoryConnection(MsTrue, Twcs_true_, Vec3(0.8, 0.1, 0.1));
-                    if (menuShowCamera)
-                        DrawTrajectoryCamera(MsTrue, Vec3(0, 0, 1));
                 }
-
-                if (menuShowConnections)
+                if (menuShowPoseGraphTrajectory)
                 {
-                    //TODO: 这个要和 优化前 还是 后的pose 绑定
-                    DrawTrajectoryConnection(vertex_connections_);
-                    // click_show_connection = false;
+                    std::vector<pangolin::OpenGlMatrix> MsTrue;
+                    if (Twcs_true_.size() > 0)
+                    {
+                        DrawTrajectoryConnection(MsTrue, Twcs_true_, Vec3(0.8, 0.1, 0.1));
+                        if (menuShowCamera)
+                            DrawTrajectoryCamera(MsTrue, Vec3(0, 0, 1));
+                    }
                 }
-                pangolin::FinishFrame();    
+                pangolin::FinishFrame();
             }
-        }
-
-        void DealwithPoseGraph(const std::string &path_g2ofile, std::pair<int, int> &graph_size)
-        {
-            std::pair<int, int> pose_graph_size;
-            
-            std::cout << "path:" << path_g2ofile << std::endl;
-            std::cout << std::endl
-                      << "\033[0;35m[Venom Similator Printer]The path of the "
-                         "input file:"
-                      << path_g2ofile << "\033[0m" << std::endl;
-
-            // tested
-            IO::ReadG2oFile(path_g2ofile, &poses_, &constraints_);
-            graph_size.first = poses_.size();
-            graph_size.second = constraints_.size();
-        }
-
-        void SetPoseGraph()
-        {
-            // from camera poses to Eigen::
-            Twcs_true_.clear();
-            vertex_connections_.clear();
-            for(auto &pose : poses_)
-            {
-                Mat4 Twc_true = Mat4::Identity();
-                // int pose_id = pose.first;
-                // translation
-                Twc_true.template block<3,1>(0,3) = pose.second.p;
-                // rotation
-                // pose.second.q;
-                Twcs_true_.push_back(Twc_true);
-            }
-
-            for(auto &constraint: constraints_)
-            {
-                int type = -1;  
-                if(constraint.name()=="EDGE_SE3:QUAT")
-                    type = 0;
-                else if(constraint.name()=="EDGE_SO3:QUAT") 
-                    type = 1;    
-
-               vertex_connections_.push_back(Vec3(type, constraint.id_begin, constraint.id_end));
-            }
-        }
-
-        bool DealWithVenomDataset(const std::string &path_venomfile,
-                                  simulator::OptimizationManager &factorgraph)
-        {
-            std::cout << "path:" << path_venomfile << std::endl;
-            std::cout << std::endl
-                      << "\033[0;35m[Venom Similator Printer]The path of the "
-                         "input file:"
-                      << path_venomfile << "\033[0m" << std::endl;
-            // tested
-            IO::ReadVENOMFactorGraph(path_venomfile, factorgraph);
-            // poses, map_points,  map_lines, map_paralines, asso_mappoints, asso_maplines);
-            std::cout << "read a venom sequence..." << std::endl;
-            return true;
         }
 
         // Page-----------------> Private Pipeline
@@ -633,7 +574,7 @@ namespace simulator
                     if (menuShowLine)
                     {
                         Eigen::Vector3d gt_color(1.0, 0.0, 0.0);
-                        DrawMapLine(lines_gt_, gt_color);
+                        DrawGTMapLine(lines_gt_, gt_color);
                     }
                     if (menuShowPoint)
                     {
@@ -648,12 +589,11 @@ namespace simulator
                     //---> point_line
                     // camera-landmark association
                     ptr_tracker_ = new simulator::Track(
-                        ptr_env_manager_->asso_epid_frameid_pos_, 
-                        ptr_env_manager_->asso_epid_frameid_pixeld_,
-                        ptr_env_manager_->asso_frameid_epid_, 
+                        ptr_env_manager_->asso_epid_frameid_pos_,
+                        ptr_env_manager_->asso_frameid_epid_,
                         ptr_env_manager_->asso_elid_frameid_pos_,
-                        ptr_env_manager_->asso_elid_frameid_pixeld_,
                         ptr_env_manager_->asso_frameid_elid_,
+                        ptr_env_manager_->asso_paralineid_elids_,
                         ptr_env_manager_->ptr_robot_trajectory_);
 
                     click_start_track = false;
@@ -736,7 +676,7 @@ namespace simulator
                     if (menuShowLine)
                     {
                         Eigen::Vector3d color(1.0, 0.0, 0.0);
-                        DrawMapLine(lines_gt_, color);
+                        DrawGTMapLine(lines_gt_, color);
                     }
                     if (menuShowPoint)
                     {
@@ -850,15 +790,12 @@ namespace simulator
                     // prepare data for optimization
                     if (start_ba)
                     {
-                        ptr_tracker_->GetInitFramePoses(opti_para_.kfs);
+                        ptr_tracker_->GetInitFramePoses(opti_para_.kfs, true /*localmap or relative pose*/);
                         // global position
                         ptr_tracker_->GetInitMapPoints(opti_para_.mappoints);
                         ptr_tracker_->GetInitMapLines(opti_para_.maplines);
                         ptr_env_manager_->GetAssoMPMeas(opti_para_.asso_mp_meas);
-                        ptr_env_manager_->GetAssoFrameMPs(opti_para_.mp_obsers);
                         ptr_env_manager_->GetAssoMLMeas(opti_para_.asso_ml_meas);
-                        ptr_env_manager_->GetAssoMLMeasD(opti_para_.asso_ml_posi);
-                        ptr_env_manager_->GetAssoFrameMLs(opti_para_.mp_obsers);
                         // TODO
                         ptr_env_manager_->GetAssoParalis(opti_para_.asso_paralineid_mlids);
                         click_start_opti = false;
@@ -954,6 +891,65 @@ namespace simulator
         }
 
     private:
+        void DealwithPoseGraph(const std::string &path_g2ofile, std::pair<int, int> &graph_size)
+        {
+            std::pair<int, int> pose_graph_size;
+
+            std::cout << "path:" << path_g2ofile << std::endl;
+            std::cout << std::endl
+                      << "\033[0;35m[Venom Similator Printer]The path of the "
+                         "input file:"
+                      << path_g2ofile << "\033[0m" << std::endl;
+
+            // tested
+            IO::ReadG2oFile(path_g2ofile, &poses_, &constraints_);
+            graph_size.first = poses_.size();
+            graph_size.second = constraints_.size();
+        }
+
+        void SetPoseGraph()
+        {
+            // from camera poses to Eigen::
+            Twcs_true_.clear();
+            vertex_connections_.clear();
+            for (auto &pose : poses_)
+            {
+                Mat4 Twc_true = Mat4::Identity();
+                // int pose_id = pose.first;
+                // translation
+                Twc_true.template block<3, 1>(0, 3) = pose.second.p;
+                // rotation
+                // pose.second.q;
+                Twcs_true_.push_back(Twc_true);
+            }
+
+            for (auto &constraint : constraints_)
+            {
+                int type = -1;
+                if (constraint.name() == "EDGE_SE3:QUAT")
+                    type = 0;
+                else if (constraint.name() == "EDGE_SO3:QUAT")
+                    type = 1;
+
+                vertex_connections_.push_back(Vec3(type, constraint.id_begin, constraint.id_end));
+            }
+        }
+
+        bool DealWithVenomDataset(const std::string &path_venomfile,
+                                  simulator::OptimizationManager &factorgraph)
+        {
+            std::cout << "path:" << path_venomfile << std::endl;
+            std::cout << std::endl
+                      << "\033[0;35m[Venom Similator Printer]The path of the "
+                         "input file:"
+                      << path_venomfile << "\033[0m" << std::endl;
+            // tested
+            IO::ReadVENOMFactorGraph(path_venomfile, factorgraph);
+            // poses, map_points,  map_lines, map_paralines, asso_mappoints, asso_maplines);
+            std::cout << "read a venom sequence..." << std::endl;
+            return true;
+        }
+
         /**
          * @brief Set the System Parameters based on user's inputs
          *
@@ -1000,19 +996,23 @@ namespace simulator
                 ptr_env_manager_->GetEnvPoints(points_gt_); // for visualizaiton
                 ptr_env_manager_->BuildPublicLines();
                 ptr_env_manager_->GetEnvLines(lines_gt_); // for visualizaiton
+                ptr_env_manager_->GetEnvLinesStructLabel(lines_structlabel_gt_);
 #if __TEST__OFF
-                // test
+                // test parallel
                 ptr_env_manager_->BuildPublicParalines();
 #endif
             }
             else // user design
             {
+                std::cout << "ewer4g" << std::endl;
+
                 // env_points
                 ptr_env_manager_->BuildEnvPoints();         // build ground truth points
                 ptr_env_manager_->GetEnvPoints(points_gt_); // for visualizaiton
                 // env_lines
                 ptr_env_manager_->BuildEnvLines();        // build ground truth lines
                 ptr_env_manager_->GetEnvLines(lines_gt_); // for visualizaiton
+                ptr_env_manager_->GetEnvLinesStructLabel(lines_structlabel_gt_);
             }
         }
 
@@ -1022,15 +1022,40 @@ namespace simulator
          * @param lines
          * @param color
          */
+        void DrawGTMapLine(std::vector<Mat32> &lines, Eigen::Vector3d &color)
+        {
+            glLineWidth(4.0);
+            glBegin(GL_LINES);
+
+            // for (const auto &Line : lines)
+            // {
+            // }
+            for (int i = 0; i < lines.size(); i++)
+            {
+                if (lines_structlabel_gt_[i] >= 0)
+                    glColor3f(simulator::color_table[(lines_structlabel_gt_[i] + 1) % 10][0],
+                              simulator::color_table[(lines_structlabel_gt_[i] + 1) % 10][1],
+                              simulator::color_table[(lines_structlabel_gt_[i] + 1) % 10][2]);
+                else
+                    glColor3f(0.3, 0.3, 0.3); // non-struct
+                Vec3 line0 = lines[i].block(0, 0, 3, 1);
+                Vec3 line1 = lines[i].block(0, 1, 3, 1);
+                glVertex3f(line0(0), line0(1), line0(2));
+                glVertex3f(line1(0), line1(1), line1(2));
+            }
+            glEnd();
+        }
+
         void DrawMapLine(std::vector<Mat32> &lines, Eigen::Vector3d &color)
         {
             glLineWidth(4.0);
             glBegin(GL_LINES);
-            glColor3f(color(0), color(1), color(2));
-            for (const auto &Line : lines)
+
+            glColor3f(color(0), color(1), color(2)); // non-struct
+            for (int i = 0; i < lines.size(); i++)
             {
-                Vec3 line0 = Line.block(0, 0, 3, 1);
-                Vec3 line1 = Line.block(0, 1, 3, 1);
+                Vec3 line0 = lines[i].block(0, 0, 3, 1);
+                Vec3 line1 = lines[i].block(0, 1, 3, 1);
                 glVertex3f(line0(0), line0(1), line0(2));
                 glVertex3f(line1(0), line1(1), line1(2));
             }

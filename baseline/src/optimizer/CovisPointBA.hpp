@@ -52,18 +52,17 @@ namespace simulator
                 ceres::ParameterBlockOrdering *ordering = new ceres::ParameterBlockOrdering();
                 loss_function = new ceres::CauchyLoss(1.0);
 
-                // std::cout << "loss_function: " << opti_para.mappoints.size() << std::endl;
                 // add mappoints
+                // TODO: risks in opti_para.mappoints.size() and landmark_id
                 double Para_Point_Feature[opti_para.mappoints.size()][3];
                 for(auto mp = opti_para.mappoints.begin(); mp!= opti_para.mappoints.end(); mp++)
                 {
                     int mp_id = mp->first;
-                    // if (mp_id > opti_para.mappoints.size())
-                    //     std::cout << "mp_id:" << mp_id << "," << opti_para.mappoints.size() << std::endl;
+
                     if (opti_para.mappoints[mp_id] == Vec3::Zero())
                         continue;
                     double point_distance = opti_para.mappoints[mp_id].norm();
-                    if (point_distance < 0.1)
+                    if (point_distance < 0.01)
                         assert(0 == 1);
                     Para_Point_Feature[mp_id][0] = mp->second(0);
                     Para_Point_Feature[mp_id][1] = mp->second(1);
@@ -72,8 +71,6 @@ namespace simulator
                     problem.AddParameterBlock(Para_Point_Feature[mp_id], 3);
                     // ordering 
                 }
-
-                // std::cout << "points: " << opti_para.mappoints.size() << std::endl;
 
                 // add camera pose
                 double Para_Pose[opti_para.kfs.size()][7];
@@ -98,9 +95,6 @@ namespace simulator
                     if(kf_id == 0)
                         problem.SetParameterBlockConstant(Para_Pose[kf_id]);
                 }
-
-                // std::cout << "poses: " << opti_para.kfs.size() << std::endl;
-
                 // construct ceres problem
                 for(auto asso_mp_mea = opti_para.asso_mp_meas.begin(); asso_mp_mea !=  opti_para.asso_mp_meas.end(); asso_mp_mea++)
                 {
@@ -122,12 +116,10 @@ namespace simulator
                     }
                 }
 
-                // std::cout << "mea: " << opti_para.asso_mp_meas.size() << std::endl;
-
                 // slove ceres problem
                 ceres::Solver::Options options;
                 options.minimizer_progress_to_stdout = true;
-                options.max_num_iterations = 5;
+                options.max_num_iterations = 15;
                 options.linear_solver_type = ceres::DENSE_SCHUR;
                 ceres::Solver::Summary summary;
                 ceres::Solve (options, &problem, & summary);
@@ -138,14 +130,12 @@ namespace simulator
                 for (auto kf =  opti_para.kfs.begin(); kf !=  opti_para.kfs.end(); kf++)
                 {
                     int kf_id = kf->first;
-                    Eigen::Vector3d Tran(Para_Pose[kf_id][0], Para_Pose[kf_id][1], Para_Pose[kf_id][2]);
+                    Eigen::Vector3d tran(Para_Pose[kf_id][0], Para_Pose[kf_id][1], Para_Pose[kf_id][2]);
                     Eigen::Quaterniond qua(Para_Pose[kf_id][6], Para_Pose[kf_id][3], Para_Pose[kf_id][4], Para_Pose[kf_id][5]);
                     Eigen::Matrix3d Rot = qua.toRotationMatrix();
                     Eigen::Matrix4d Twc = Eigen::Matrix4d::Identity();
                     Twc.block(0,0,3,3) = Rot;
-                    Twc.block(0,3,3,1) = Tran;
-                    // std::cout << "pose: " << kf->second << std::endl
-                    //           << Twc << std::endl;
+                    Twc.block(0, 3, 3, 1) = tran;
                     // kfs[kf_id] = Twc;
                     optimized_poses[kf_id]=Twc;
                 }
@@ -161,8 +151,6 @@ namespace simulator
                         Para_Point_Feature[mp_id][1],                   //= mp->second(1);
                         Para_Point_Feature[mp_id][2];                   //= mp->second(2);
                     optimized_mappoints[mp_id] = optimized_mappoint;
-                    // std::cout << "original: " << mp->second(0) << "," << mp->second(1) << "," << mp->second(2) << std::endl;
-                    // std::cout << "optimized: " << optimized_mappoint(0) << "," << optimized_mappoint(1) << "," << optimized_mappoint(2) << std::endl;
                 }
                 return;
             }

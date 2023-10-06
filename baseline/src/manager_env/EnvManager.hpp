@@ -56,6 +56,7 @@ namespace simulator
         simulator::EnvironmentParameter env_para_;
         std::vector<Vec3> vec_points_;
         std::vector<Mat32> vec_lines_;
+        std::vector<int> vec_lines_structlabel_;
 
         //------> map manager
         std::vector<std::pair<int, Vec3>> vec_epid_pos_w_;
@@ -140,86 +141,6 @@ namespace simulator
                 BuildSphereLines();
                 return;
             }
-
-            //             double distance =6.0;
-            //             for (int id = 0; id < env_para_.vert_lines_ + env_para_.horiz_lines_; id++)
-            //             {
-            //                 int set_id = -1;
-            //                 simulator::EnvLine *ptr_ml = new simulator::EnvLine(id, ptr_robot_trajectory_);
-            //                 if (id < 0.25 * env_para_.vert_lines_)
-            //                 {
-            //                     ptr_ml->GenerateEnvLine(distance,env_width, env_height, "vertical-left");
-            //                     set_id = 0;
-            //                 }
-            //                 else if (id < 0.5 * env_para_.vert_lines_)
-            //                 {
-            //                     ptr_ml->GenerateEnvLine(-distance, env_width, env_height, "vertical-left");
-            //                     set_id = 0;
-            //                 }
-            //                 else if (id < 0.75 * env_para_.vert_lines_)
-            //                 {
-            //                     ptr_ml->GenerateEnvLine(distance, env_width, env_height, "vertical-right");
-            //                     set_id = 0;
-            //                 }
-            //                 else if (id < env_para_.vert_lines_)
-            //                 {
-            //                     ptr_ml->GenerateEnvLine(-distance, env_width, env_height, "vertical-right");
-            //                     set_id = 0;
-            //                 }
-            //                 else if (id < env_para_.vert_lines_ + 0.25 * env_para_.horiz_lines_)
-            //                 {
-            //                     ptr_ml->GenerateEnvLine(distance, env_width, env_height, "horizontal-left");
-            //                     set_id = 1;
-            //                 }
-            //                 else if (id < env_para_.vert_lines_ + 0.5 * env_para_.horiz_lines_)
-            //                 {
-            //                     ptr_ml->GenerateEnvLine(-distance, env_width, env_height, "horizontal-left");
-            //                     set_id = 1;
-            //                 }
-            //                 else if (id < env_para_.vert_lines_ + 0.75 * env_para_.horiz_lines_)
-            //                 {
-            //                     ptr_ml->GenerateEnvLine(distance, env_width,env_height, "horizontal-right");
-            //                     set_id = 2;
-            //                 }
-            //                 else if (id < env_para_.vert_lines_ + env_para_.horiz_lines_)
-            //                 {
-            //                     ptr_ml->GenerateEnvLine(-distance, env_width, env_height, "horizontal-right");
-            //                     set_id = 2;
-            //                 }
-
-            //                 ptr_ml->AddObservation(ptr_robot_trajectory_->groundtruth_traject_id_Twc_, b_add_noise_to_meas);
-            //                 for (auto ob = ptr_ml->obs_frameid_linepos_.begin(), ob_end = ptr_ml->obs_frameid_linepos_.end(); ob != ob_end; ob++)
-            //                 {
-            //                     int frame_id = ob->first;
-            //                     Mat32 pos_in_cam = ob->second;
-            //                     asso_frameid_elid_[frame_id].push_back(std::make_pair(id, pos_in_cam));
-            //                 }
-            //                 vec_lines_.push_back(ptr_ml->pos_world_);
-            //                 // plucker representation
-            //                 // int anchor_frame_id = -1;
-            //                 // ptr_ml->GetAnchorFrameId(anchor_frame_id);
-            //                 // Mat32 plucker_in_anchor;
-            //                 // ptr_ml->GetPluckerPara(plucker_in_anchor);
-            //                 // asso_elid_ancframeid_plucker_[id] = std::make_pair(anchor_frame_id, plucker_in_anchor);
-            //                 // association
-            //                 asso_paralineid_elids_[set_id].push_back(id);
-            //                 asso_elid_frameid_pos_[id] = ptr_ml->obs_frameid_linepos_;
-            //                 asso_elid_frameid_pixeld_[id] = ptr_ml->obs_frameid_linepixel_;
-            //                 // gt
-            //                 vec_elid_pos_w_[id] = std::make_pair(ptr_ml->num_id_, ptr_ml->pos_world_);
-            //             }
-
-            // #ifdef __VERBOSE__ // remove OFF, if you want to print
-            //             for (int i = 0; i < asso_paralineid_elids_.size(); i++)
-            //             {
-            //                 std::cout << "set_i: " << i << ", ";
-            //                 for (int j = 0; j < asso_paralineid_elids_[i].size(); j++)
-            //                 {
-            //                     std::cout << asso_paralineid_elids_[i][j] << ", ";
-            //                 }
-            //                 std::cout << std::endl;
-            //             }
-            // #endif
         }
 
         void BuildCirclePoints()
@@ -282,16 +203,17 @@ namespace simulator
                 {
                     asso_epid_frameid_pixeld_[id] = ptr_ep->obs_frame_pixel_;
                     asso_epid_frameid_pos_[id] = ptr_ep->obs_frame_pos_;
+                    // gt
+                    vec_points_.push_back(ptr_ep->pos_world_);
+                    vec_epid_pos_w_.push_back(std::make_pair(ptr_ep->num_id_, ptr_ep->pos_world_)); // after checking
                 }
                 else
                 {
-                    std::cout << "association problems" << ptr_ep->obs_frame_pixel_.begin()->first << ptr_ep->obs_frame_pixel_.begin()->second << std::endl;
-                    return;
-                }
+                    std::cout << "association problems:" << ptr_ep->obs_frame_pixel_.begin()->first << ptr_ep->obs_frame_pixel_.begin()->second << std::endl;
+                    std::cout << "the env_point cannot be detected by any views" << std::endl;
 
-                // gt
-                vec_points_.push_back(ptr_ep->pos_world_);
-                vec_epid_pos_w_.push_back(std::make_pair(ptr_ep->num_id_, ptr_ep->pos_world_)); // after checking
+                    continue;
+                }
             }
         }
 
@@ -442,6 +364,7 @@ namespace simulator
                 {
                     std::cout << "association problems" << ptr_ep->obs_frame_pixel_.begin()->first << ptr_ep->obs_frame_pixel_.begin()->second << std::endl;
                     // return;
+                    assert(1 == 0);
                 }
 
                 // gt
@@ -482,7 +405,7 @@ namespace simulator
             }
 
             // generate points
-            for (int id = 0; id < env_para_.vert_lines_ + env_para_.horiz_lines_ /*500 map points*/; id++)
+            for (int id = 0; id < env_para_.vert_lines_ /*500 map points*/; id++)
             {
                 int i = id % planes.size();
                 Eigen::Vector3d plane_max_bounds = Eigen::Vector3d::Zero();
@@ -524,6 +447,8 @@ namespace simulator
 
                 // gt
                 vec_lines_.push_back(ptr_ml->pos_world_);
+                vec_lines_structlabel_.push_back(ptr_ml->vanishing_direction_type_);
+
                 vec_elid_pos_w_.push_back(std::make_pair(ptr_ml->num_id_, ptr_ml->pos_world_));
             }
         }
@@ -555,7 +480,7 @@ namespace simulator
             }
 
             // generate points
-            for (int id = 0; id < env_para_.vert_lines_ + env_para_.horiz_lines_ /*500 map points*/; id++)
+            for (int id = 0; id < env_para_.vert_lines_ /*500 map points*/; id++)
             {
                 int i = id % planes.size();
                 Eigen::Vector3d plane_max_bounds = Eigen::Vector3d::Zero();
@@ -603,6 +528,8 @@ namespace simulator
 
                 // gt
                 vec_lines_.push_back(ptr_ml->pos_world_);
+                vec_lines_structlabel_.push_back(ptr_ml->vanishing_direction_type_);
+
                 vec_elid_pos_w_.push_back(std::make_pair(ptr_ml->num_id_, ptr_ml->pos_world_));
             }
         }
@@ -634,7 +561,7 @@ namespace simulator
             }
 
             // generate points
-            for (int id = 0; id < env_para_.vert_lines_ + env_para_.horiz_lines_ /*500 map points*/; id++)
+            for (int id = 0; id < env_para_.vert_lines_ /*500 map points*/; id++)
             {
                 int i = id % planes.size();
                 Eigen::Vector3d plane_max_bounds = Eigen::Vector3d::Zero();
@@ -676,6 +603,8 @@ namespace simulator
 
                 // gt
                 vec_lines_.push_back(ptr_ml->pos_world_);
+                vec_lines_structlabel_.push_back(ptr_ml->vanishing_direction_type_);
+
                 vec_elid_pos_w_.push_back(std::make_pair(ptr_ml->num_id_, ptr_ml->pos_world_));
             }
         }
@@ -706,16 +635,20 @@ namespace simulator
             IO::ReadPublicLineClouds(envline_path_, maplines);
             std::vector<std::pair<int, Eigen::Matrix<double, 7, 1>>> asso_elid_frameid;
             IO::ReadPublicLineAssociation(associate_path_, asso_elid_frameid);
+            std::vector<std::pair<int, std::vector<int>>> asso_vdid_lineids;
+            IO::ReadPublicParalineAssociation(associate_path_, asso_vdid_lineids);
 
             for (int i = 0; i < maplines.size(); i++)
             {
-                // set_id for parallel
+                // set_id for parallel lines
                 int set_id = -1;
 
-                double id = maplines[i][0];
+                int id = maplines[i][0];
 
                 simulator::EnvLine *ptr_ml = new simulator::EnvLine(id, ptr_robot_trajectory_);
                 ptr_ml->GenerateEnvLine(maplines[i], false);
+                ptr_ml->GenerateStructLabel(asso_vdid_lineids);
+
                 set_id = ptr_ml->vanishing_direction_type_;
 
                 // ptr_ml->AddObservation(ptr_robot_trajectory_->groundtruth_traject_id_Twc_,
@@ -733,12 +666,17 @@ namespace simulator
 
                 // association
                 // assert(set_id>0);
-                if (set_id > 0)
-                    asso_paralineid_elids_[set_id].push_back(id);
-                asso_elid_frameid_pos_[id] = ptr_ml->obs_frameid_linepos_;
-                asso_elid_frameid_pixeld_[id] = ptr_ml->obs_frameid_linepixel_;
+                if (ptr_ml->obs_frameid_linepixel_.size() > 0)
+                {
+                    if (set_id >= 0)
+                        asso_paralineid_elids_[set_id].push_back(id);
+                    asso_elid_frameid_pos_[id] = ptr_ml->obs_frameid_linepos_;
+                    asso_elid_frameid_pixeld_[id] = ptr_ml->obs_frameid_linepixel_;
+                }
+
                 // gt
                 vec_lines_.push_back(ptr_ml->pos_world_);
+                vec_lines_structlabel_.push_back(ptr_ml->vanishing_direction_type_);
                 vec_elid_pos_w_.push_back(std::make_pair(ptr_ml->num_id_, ptr_ml->pos_world_));
             }
         }
@@ -762,11 +700,11 @@ namespace simulator
 
                     for (int j = i + 1; j < asso_i.second.size(); j++)
                     {
-                        Eigen::Matrix<double, 6, 1> ml_j = maplines[asso_i.second[i]];
+                        Eigen::Matrix<double, 6, 1> ml_j = maplines[asso_i.second[j]];
                         Eigen::Vector3d direct_j = (ml_j.head(3) - ml_j.tail(3)).normalized();
                         double distance = direct.transpose() * direct_j;
+                        std::cout << "angle comparison in ids: " << asso_i.second[i] << "," << asso_i.second[j] << std::endl;
                         if (abs(distance) < 0.98)
-
                             std::cout << "angle:" << distance << std::endl;
                     }
                 }
@@ -775,8 +713,10 @@ namespace simulator
 
         void BuildPublicPoints()
         {
+            // read map_point
             std::vector<std::pair<int /*point_id*/, Eigen::Vector3d /*point_position*/>> pts;
             IO::ReadPublicPointClouds(envpoint_path_, pts);
+            // read observation
             std::vector<std::pair<int /*mp_id*/, int /*frame_id*/>> asso_epid_frameid;
             IO::ReadPublicPointAssociation(associate_path_, asso_epid_frameid);
 
@@ -785,6 +725,7 @@ namespace simulator
                 int id = pt.first;
                 simulator::EnvPoint *ptr_ep = new simulator::EnvPoint(id, ptr_robot_trajectory_); // MapPoint(id, ptr_robot_trajectory_);
                 ptr_ep->GenerateEnvPoint(pt.second);
+                // generate measurements
                 ptr_ep->AddObservation(ptr_robot_trajectory_->groundtruth_traject_id_Twc_, asso_epid_frameid, b_add_noise_to_meas);
 
                 for (auto ob = ptr_ep->obs_frame_pos_.begin(), ob_end = ptr_ep->obs_frame_pos_.end(); ob != ob_end; ob++)
@@ -793,12 +734,16 @@ namespace simulator
                     Vec3 pos_in_cam = ob->second;
                     asso_frameid_epid_[frame_id].push_back(std::make_pair(id, pos_in_cam));
                 }
-                // association
-                asso_epid_frameid_pixeld_[id] = ptr_ep->obs_frame_pixel_;
-                asso_epid_frameid_pos_[id] = ptr_ep->obs_frame_pos_;
-                // gt
-                vec_points_.push_back(ptr_ep->pos_world_);
-                vec_epid_pos_w_.push_back(std::make_pair(ptr_ep->num_id_, ptr_ep->pos_world_)); // after checking
+
+                if (asso_frameid_epid_.size() > 0) // has observations
+                {
+                    // association
+                    asso_epid_frameid_pixeld_[id] = ptr_ep->obs_frame_pixel_;
+                    asso_epid_frameid_pos_[id] = ptr_ep->obs_frame_pos_;
+                    // gt
+                    vec_points_.push_back(ptr_ep->pos_world_);
+                    vec_epid_pos_w_.push_back(std::make_pair(ptr_ep->num_id_, ptr_ep->pos_world_)); // after checking
+                }
             }
         }
 
@@ -873,6 +818,10 @@ namespace simulator
         {
             env_lines = vec_lines_;
         }
+        void GetEnvLinesStructLabel(std::vector<int> &vec_lines_structlabel)
+        {
+            vec_lines_structlabel = vec_lines_structlabel_;
+        }
 
         void GetAssoParalis(std::map<int /*mapparaline_id*/, std::vector<int>> &asso_paralineid_elids)
         {
@@ -897,12 +846,30 @@ namespace simulator
                     vec_frameid_meas.push_back(std::make_pair(mit_id->first, Eigen::Vector2d(mit_id->second.x(), mit_id->second.y())));
                 asso_mp_meas[mappoint_id] = vec_frameid_meas;
             }
+            // TODO: check
+            for (auto meas : asso_mp_meas)
+            {
+                int mp_id = meas.first;
+
+                if (asso_mp_meas[mp_id].size() != asso_epid_frameid_pixeld_[mp_id].size())
+                    assert(1 == 0);
+                for (auto observation : meas.second)
+                {
+                    int frame_id = observation.first;
+                    std::cout << "mp_id:" << mp_id << "," << frame_id
+                              << "," << observation.second
+                              << "," << asso_epid_frameid_pixeld_[mp_id][frame_id] << std::endl;
+                    if (observation.second.x() != asso_epid_frameid_pixeld_[mp_id][frame_id].x())
+                    {
+                        assert(1 == 0);
+                    }
+                }
+            }
+            //
         }
 
         void GetAssoMLMeas(std::map<int /*mapline_id*/, std::vector<std::pair<int /*frame_id*/, Eigen::Vector4d /*2d_meas*/>>> &asso_ml_meas)
         {
-            // asso_plid_frame_pos_
-            // TODO: (empty structure)
             for (auto mit = asso_elid_frameid_pixeld_.begin(); mit != asso_elid_frameid_pixeld_.end(); mit++)
             {
                 int mapline_id = mit->first;
@@ -910,10 +877,11 @@ namespace simulator
                 for (auto mit_id = mit->second.begin(); mit_id != mit->second.end(); mit_id++)
                 {
                     Eigen::Vector4d endpixels;
-                    endpixels << mit_id->second(0, 0), mit_id->second(1, 0), mit_id->second(0, 1), mit_id->second(1, 1);
-
+                    endpixels << mit_id->second(0, 0),
+                        mit_id->second(1, 0),
+                        mit_id->second(0, 1),
+                        mit_id->second(1, 1);
                     // std::cout << "ML meas: " << endpixels.transpose() << std::endl;
-
                     vec_frameid_meas.push_back(std::make_pair(mit_id->first, endpixels));
                 }
                 asso_ml_meas[mapline_id] = vec_frameid_meas;

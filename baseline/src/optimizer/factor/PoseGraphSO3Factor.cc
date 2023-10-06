@@ -1,19 +1,10 @@
 /*
  * @Author: yanyan-li yanyan.li.camp@gmail.com
  * @Date: 2023-09-30 06:55:26
- * @LastEditTime: 2023-09-30 10:23:38
+ * @LastEditTime: 2023-10-05 02:12:49
  * @LastEditors: yanyan-li yanyan.li.camp@gmail.com
  * @Description:
  * @FilePath: /baseline/src/optimizer/factor/PoseGraphSO3Factor.cc
- */
-
-/*** 
- * @Author: liyanyan liyanyan@meta-bounds.com
- * @Date: 2023-02-08 02:11:05
- * @LastEditTime: 2023-02-21 08:51:06
- * @LastEditors: liyanyan liyanyan@meta-bounds.com
- * @Description: 
- * @FilePath: /metaboundsstereovio/src/optimize/factor/ceres/RotationOnlyFactor.hpp
  */
 
 #ifndef METABOUNDS_VIO_ROTATION_ONLY_FACTOR_HPP

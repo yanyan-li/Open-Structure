@@ -46,9 +46,10 @@ namespace simulator
         std::vector<std::pair<int, Mat32>> vec_elid_pos_w_;
         std::map<int/*mappoint_id*/, Vec3/*posi_in_w*/> local_mappoints_;
         std::map<int/*maplines_id*/, Mat32/*posi_in_w*/> local_maplines_;
+        std::map<int /*envparaline_id*/, std::vector<int /*envline_id*/>> paralineid_elids_;
 
         // poses
-        std::vector<std::pair<int/*frame_id*/,  Eigen::Matrix4d/*frame_pose*/>> vec_localmap_Twc_;
+        std::vector<std::pair<int /*frame_id*/, Eigen::Matrix4d /*frame_pose*/>> vec_localmap_Twc_;
         std::vector<std::pair<int/*frame_id*/,  Eigen::Matrix4d/*frame_pose*/>> vec_vo_Twc_;
 
     public:
@@ -69,13 +70,13 @@ namespace simulator
          *
          */
         Track(std::map<int /*envpoint_id*/, frame_point_meas> &asso_epid_frameid_pos,
-              std::map<int /*envpoint_id*/, frame_point_meas> &asso_epid_frameid_pixeld,
               std::map<int /*frame_id*/, std::vector<std::pair<int /*ep_id*/, Vec3>>> &asso_frameid_epid, // noisy 3D in camera coordinate
               std::map<int /*envline_id*/, frame_line_meas> &asso_elid_frameid_pos,
-              std::map<int /*envline_id*/, frame_line_meas> &asso_elid_frameid_pixeld,
-              std::map<int /*frame_id*/, std::vector<std::pair<int /*el_id*/, Mat32>>> &asso_frameid_elid, // noisy measurement
-              Trajectory *robot_trajectory) : robot_traject_(robot_trajectory)
+              std::map<int /*frame_id*/, std::vector<std::pair<int /*el_id*/, Mat32>>> &asso_frameid_elid, // noisy 3D in camera coordinate
+              std::map<int /*envparaline_id*/, std::vector<int /*envline_id*/>> asso_paralineid_elids_,
+              Trajectory *robot_trajectory) : robot_traject_(robot_trajectory), paralineid_elids_(asso_paralineid_elids_)
         {
+            // initialization measurements
             obs_point_.clear();
             obs_line_.clear();
             for (auto frameid_epid : asso_frameid_epid)
@@ -102,7 +103,7 @@ namespace simulator
                     if (distance < 0.01)
                     {
                         std::cout << "short distance:" << distance << ",frame:" << frame_idx << ",el_id" << el_id << std::endl;
-                        // assert(0 == 1);
+                        assert(0 == 1);
                     }
 
                     obs_line_[frame_idx].push_back(std::make_pair(el_id, pos_in_cam));
@@ -133,6 +134,7 @@ namespace simulator
                 int mapline_id = mit->first;
                 local_maplines_[mapline_id] = Mat32::Zero();
             }
+
             mbTrackOdometry = false;
             num_track_speed_ = 1;
         }
@@ -192,7 +194,6 @@ namespace simulator
                 if (frame_id == 0) // initialization
                 {
                     curr_gt_pose_in_world = frame.second;
-
                     vo_curr_pose_in_world = frame.second;
                     map_curr_pose_in_world = frame.second;
 
@@ -239,6 +240,7 @@ namespace simulator
                 }
                 else
                 {
+                    bool b_skip_fusion = false;
                     DrawMeasurements(obs_point_[frame_id], obs_line_[frame_id], frame_id);
                     // relative pose  T_{prev, curr}
                     vo_curr_pose_in_world = RelativePoseEstimation(vo_prev_pose_in_world,
@@ -265,19 +267,21 @@ namespace simulator
                                           << obs_point_[frame_id][i].second(0) << ","
                                           << obs_point_[frame_id][i].second(1) << ","
                                           << obs_point_[frame_id][i].second(2) << std::endl;
-                            // init local_mappoints
+
+                            // use last_frame's pose
                             map_curr_pose_in_world = map_prev_pose_in_world;
+                            b_skip_fusion = true;
                         }
                     }
 
-                    if (!with_lines)
+                    if (!with_lines && !b_skip_fusion)
                     {
                         if (with_localmap)
                             FuseMapPoint(local_mappoints_, map_curr_pose_in_world, obs_point_[frame_id]);
                         else
                             FuseMapPoint(local_mappoints_, vo_curr_pose_in_world, obs_point_[frame_id]);
                     }
-                    else if (with_lines)
+                    else if (with_lines && !b_skip_fusion)
                     {
                         if (with_localmap)
                         {
@@ -286,15 +290,13 @@ namespace simulator
                         }
                         else
                         {
-
                             FuseMapPoint(local_mappoints_, vo_curr_pose_in_world, obs_point_[frame_id]);
                             FuseMapLine(local_maplines_, vo_curr_pose_in_world, obs_line_[frame_id]);
                         }
                     }
-
                     curr_gt_pose_in_world = frame.second;
                 }
-                // set previous pose
+                // save previous pose
                 map_prev_pose_in_world = map_curr_pose_in_world;
                 vo_prev_pose_in_world = vo_curr_pose_in_world;
 
@@ -403,7 +405,7 @@ namespace simulator
                 {
                     // id
                     int curr_point_id = points_curr[j].first;
-                    if (prev_point_id == curr_point_id)
+                    if (prev_point_id == curr_point_id) // map_point --- frame_point matching
                     {
                         // 2D pixel of the curr_frame
                         Vec3 point_in_curr = points_curr[j].second;
@@ -707,29 +709,36 @@ namespace simulator
             for(auto mit=local_mappoints_.begin(); mit!=local_mappoints_.end(); mit++)
             {
                 int mappoint_id = mit->first;
-                if (mit->second == Vec3::Zero())
+                if (mit->second == Vec3::Zero()) // remove empty landmarks
                     continue;
                 double point_distance = mit->second.norm();
                 if (point_distance < 0.1)
-                    continue;
+                    assert(1 == 0);
+                // continue;
                 mappoints[mappoint_id] = mit->second;
             }
         }
 
-        void GetInitFramePoses(std::map<int /*kf_id*/, Mat4> &kfs)
+        void GetInitFramePoses(std::map<int /*kf_id*/, Mat4> &kfs, bool use_vo_pose = true)
         {
-            for(auto mit=vec_localmap_Twc_.begin(); mit!=vec_localmap_Twc_.end(); mit++)
+            if (!use_vo_pose)
             {
-                int frame_id = mit->first;
-                Mat4 frame_pose = mit->second;
-                kfs[frame_id] = frame_pose;
+                for (auto mit = vec_localmap_Twc_.begin(); mit != vec_localmap_Twc_.end(); mit++)
+                {
+                    int frame_id = mit->first;
+                    Mat4 frame_pose = mit->second;
+                    kfs[frame_id] = frame_pose;
+                }
             }
-            // for(auto mit=vec_vo_Twc_.begin(); mit!=vec_vo_Twc_.end(); mit++)
-            // {
-            //     int frame_id = mit->first;
-            //     Mat4 frame_pose = mit->second;
-            //     kfs[frame_id] = frame_pose;
-            // }
+            else
+            {
+                for (auto mit = vec_vo_Twc_.begin(); mit != vec_vo_Twc_.end(); mit++)
+                {
+                    int frame_id = mit->first;
+                    Mat4 frame_pose = mit->second;
+                    kfs[frame_id] = frame_pose;
+                }
+            }
         }
 
         void GetInitFramePosesVect(std::vector<Mat4> &kfs)
@@ -766,10 +775,12 @@ namespace simulator
             for(auto mit=local_maplines_.begin(); mit!=local_maplines_.end(); mit++)
             {
                 int mapline_id = mit->first;
+                if (mit->second == Mat32::Zero()) // remove empty landmarks
+                    continue;
 
                 double line_length = (mit->second.col(0) - mit->second.col(1)).norm();
-                if (line_length < 0.1)
-                    continue;
+                if (line_length < 0.01)
+                    assert(1 == 0);
                 maplines[mapline_id] = mit->second;
             }
         }
@@ -818,7 +829,7 @@ namespace simulator
         }
 
         void DrawMeasurements(std::vector<std::pair<int /*point_id*/, Vec3>> &points_curr,
-                              std::vector<std::pair<int /*point_id*/, Mat32>> &lines_curr,
+                              std::vector<std::pair<int /*line_id*/, Mat32>> &lines_curr,
                               int frame_idx)
         {
             bool b_show_feature_id = true;
@@ -854,9 +865,11 @@ namespace simulator
                 Eigen::Vector2d s_pixel_curr, e_pixel_curr;
                 GetPixelPosition(s_line_in_c, s_pixel_curr);
                 GetPixelPosition(e_line_in_c, e_pixel_curr);
-                cv::line(img, cv::Point(s_pixel_curr(0), s_pixel_curr(1)), cv::Point(e_pixel_curr(0), e_pixel_curr(1)), cv::Scalar(0, 0, 255), 2);
+                cv::Scalar color = cv::Scalar(0, 0, 255);
+                GetParallelLabel(ml_id, color);
+                cv::line(img, cv::Point(s_pixel_curr(0), s_pixel_curr(1)), cv::Point(e_pixel_curr(0), e_pixel_curr(1)), color, 2);
                 if (b_show_feature_id)
-                    cv::putText(img, std::to_string(ml_id), cv::Point(s_pixel_curr(0), s_pixel_curr(1)), font_face, font_scale, cv::Scalar(0, 0, 255), thickness, 8, 0);
+                    cv::putText(img, std::to_string(ml_id), cv::Point(s_pixel_curr(0), s_pixel_curr(1)), font_face, font_scale, color, thickness, 8, 0);
             }
             cv::namedWindow("2D Viewer", cv::WINDOW_NORMAL);
             cv::imshow("2D Viewer", img);
@@ -908,6 +921,27 @@ namespace simulator
             // cv::imshow("2D Viewer", img);
             // if (cv::waitKey() == 27)
             //     cv::imwrite(std::to_string(frame_idx) + ".png", img);
+        }
+
+        void GetParallelLabel(const int line_id, cv::Scalar &color_label)
+        {
+            bool skip = false;
+            for (auto para_group : paralineid_elids_)
+            {
+                int vd_id = para_group.first;
+                std::cout << "vd_id:" << vd_id << std::endl;
+                for (int i = 0; i < para_group.second.size(); i++)
+                {
+                    std::cout << "line_id:" << para_group.second[i] << ". this line:" << line_id << std::endl;
+                    if (para_group.second[i] == line_id)
+                    {
+                        color_label[0] = int(simulator::color_table[(vd_id + 1) % 10][0] * 255);
+                        color_label[1] = int(simulator::color_table[(vd_id + 1) % 10][1] * 255);
+                        color_label[2] = int(simulator::color_table[(vd_id + 1) % 10][2] * 255);
+                        return;
+                    }
+                }
+            }
         }
     };
 }
