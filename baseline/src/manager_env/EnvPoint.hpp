@@ -144,7 +144,6 @@ namespace simulator
                     pixel_d_coord(1, 0) += noise_y;
                     pixel_d_coord(2, 0) += depth_n_(generator_);
                 }
-                obs_frame_pixel_[i] = pixel_d_coord;
 
                 // measured 3d features in camera: (x,y,z)
                 Vec3 pos_noised_in_i;
@@ -165,6 +164,8 @@ namespace simulator
                 std::cout << "groundtruth XYZ in cam:" << pos_in_i(0) << "," << pos_in_i(1) << "," << pos_in_i(2) << std::endl;
                 std::cout << "noisy XYZ in cam:" << x << "," << y << "," << z << std::endl;
 #endif
+                obs_frame_pixel_[i] = pixel_d_coord;
+
                 if (add_noise_to_meas)
                     obs_frame_pos_[i] = pos_noised_in_i;
                 else
@@ -182,10 +183,9 @@ namespace simulator
             for (auto asso_i : associate)
             {
                 int point_id = asso_i.first;
-                // std::cout << "point_id" << point_id << num_id_ << std::endl;
                 if (num_id_ == point_id)
                 {
-                    int i = asso_i.second;
+                    int frame_id = asso_i.second;
                     auto Twc = keyframes_Twcs[asso_i.second];
                     Mat4 Tcw = Twc.inverse();
                     Eigen::Matrix3d Rcw = Tcw.block(0, 0, 3, 3);
@@ -201,7 +201,7 @@ namespace simulator
                     // condition 1: positive depth
                     if (depth_in_i <= 0.01)
                     {
-                        std::cout << depth_in_i << "mpid:" << num_id_ << "frame_id:" << i << std::endl;
+                        std::cout << depth_in_i << "mpid:" << num_id_ << "frame_id:" << frame_id << std::endl;
                         assert(1 == 0); // backside of the camera
                     }
 
@@ -222,15 +222,14 @@ namespace simulator
                         noise_y = pixel_n_(generator_);
                         pixel_d_coord(0, 0) += noise_x;
                         pixel_d_coord(1, 0) += noise_y;
-                        pixel_d_coord(2, 0) += depth_n_(generator_);
+                        pixel_d_coord(2, 0) = 35130 / (35130 / (depth_in_i + depth_n_(generator_)) + 0.5 + 0.5);
                     }
-                    obs_frame_pixel_[i] = pixel_d_coord;
 
                     // measured 3d features in camera: (x,y,z)
                     Vec3 pos_noised_in_i;
-                    double z = depth_in_i + depth_n_(generator_); // with noise
-                    // double z = 35130 / (35130 / (depth_in_i + depth_n_(generator_)) + 0.5 + 0.5);
-                    // std::cout << "z-noise:" << z << "," << depth_in_i << std::endl;
+                    // double z = depth_in_i + depth_n_(generator_); // with noise
+                    double z = pixel_d_coord(2, 0);
+                    //  std::cout << "z-noise:" << z << "," << depth_in_i << std::endl;
                     double x = z * (pixel_d_coord(0, 0) - trajec_->cam_intri.cx) / trajec_->cam_intri.fx;
                     double y = z * (pixel_d_coord(1, 0) - trajec_->cam_intri.cy) / trajec_->cam_intri.fy;
                     pos_noised_in_i << x, y, z;
@@ -247,10 +246,11 @@ namespace simulator
                     std::cout << "groundtruth XYZ in cam:" << pos_in_i(0) << "," << pos_in_i(1) << "," << pos_in_i(2) << std::endl;
                     std::cout << "noisy XYZ in cam:" << x << "," << y << "," << z << std::endl;
 #endif
+                    obs_frame_pixel_[frame_id] = pixel_d_coord;
                     if (add_noise_to_meas)
-                        obs_frame_pos_[i] = pos_noised_in_i;
+                        obs_frame_pos_[frame_id] = pos_noised_in_i;
                     else
-                        obs_frame_pos_[i] = pos_in_i; // ground truth
+                        obs_frame_pos_[frame_id] = pos_in_i; // ground truth
 
                     observed_++;
                 }

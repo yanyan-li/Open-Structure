@@ -36,7 +36,7 @@ class EnvLine
      * @brief The env_point is detected by the i_Trajectory ^{th} Trajectory,
      *        and associated to the i_pixel ^{th} pixel.
      */
-    std::map<int /*frame_id*/, Mat32> obs_frameid_linepixel_;
+    std::map<int /*frame_id*/, Mat32 /*pixel_on_img*/> obs_frameid_linepixel_;
     std::map<int /*frame_id*/, Mat32 /*pos_in_cam*/> obs_frameid_linepos_;
 
     std::random_device rd;
@@ -276,24 +276,23 @@ class EnvLine
         else
             vanishing_direction_type_ = -1;
         vanishing_direction_ = (pos_world_.block(0, 0, 3, 1) - pos_world_.block(0, 1, 3, 1)).normalized();
-        std::cout << "line_id: " << num_id_ << "," << vanishing_direction_ << std::endl;
+        // std::cout << "line_id: " << num_id_ << "," << vanishing_direction_ << std::endl;
         length = (pos_world_.col(0) - pos_world_.col(1)).norm();
     }
 
     void GenerateStructLabel(std::vector<std::pair<int, std::vector<int>>> &asso_vdid_lineids)
     {
-        bool skip = false;
         for (auto para_group : asso_vdid_lineids)
         {
             int vd_id = para_group.first;
-            std::cout << "vd_id:" << vd_id << std::endl;
+            // std::cout << "vd_id:" << vd_id << std::endl;
             for (int i = 0; i < para_group.second.size(); i++)
             {
-                std::cout << "line_id:" << para_group.second[i] << ". this line:" << num_id_ << std::endl;
+                // std::cout << "line_id:" << para_group.second[i] << ". this line:" << num_id_ << std::endl;
                 if (para_group.second[i] == num_id_)
                 {
                     vanishing_direction_type_ = vd_id;
-                    std::cout << "this line: " << num_id_ << " is labeled:" << vanishing_direction_type_ << std::endl;
+                    // std::cout << "this line: " << num_id_ << " is labeled:" << vanishing_direction_type_ << std::endl;
                     return;
                 }
             }
@@ -455,8 +454,8 @@ class EnvLine
             if (num_id_ == line_id)
             {
                 // std::cout << "num_id_" << num_id_ << std::endl;
-                int i = asso_i.second[0];
-                auto Twc = keyframes_Twcs[i];
+                int frame_id = asso_i.second[0];
+                auto Twc = keyframes_Twcs[frame_id];
                 Mat4 Tcw = Twc.inverse();
                 Eigen::Matrix3d Rcw = Tcw.block(0, 0, 3, 3);
                 Mat32 tcw(Mat32::Zero());
@@ -467,7 +466,7 @@ class EnvLine
 
                 Mat32 pos_in_i;
                 Vec2 depth_in_i;
-                // in the camera coordinate
+                // in the camera coordinate (without noise)
                 pos_in_i = Rcw * pos_world_ + tcw;
 
 #if __DEBUG_OFF__
@@ -492,6 +491,12 @@ class EnvLine
                 Mat32 uvd_out = Mat32::Zero();
                 uvd_out.block(0, 0, 3, 1) << asso_i.second[1], asso_i.second[2], asso_i.second[3];
                 uvd_out.block(0, 1, 3, 1) << asso_i.second[4], asso_i.second[5], asso_i.second[6];
+
+                if (asso_i.second[3] < 0.01 || asso_i.second[6] < 0.01)
+                {
+                    assert(1 == 0);
+                }
+                // remove short line
                 if ((uvd_out.block(0, 0, 2, 1) - uvd_out.block(0, 1, 2, 1)).norm() < 5)
                     continue;
                 auto AddNoise = [&](Vec3 &pixel_d_coord, Vec3 &meas_3d)
@@ -538,12 +543,11 @@ class EnvLine
                     meas_3d_in_i.block(0, 1, 3, 1) = meas_3d_coord_e;
                 }
 
-                if (meas_3d_coord_s.z() < 0.01 || meas_3d_coord_s.z() < 0.01)
+                if (meas_3d_coord_s.z() < 0.01 || meas_3d_coord_e.z() < 0.01)
                     assert(1 == 0);
 
                 pixel_d_coord.block(0, 0, 3, 1) = pixel_d_coord_s;
                 pixel_d_coord.block(0, 1, 3, 1) = pixel_d_coord_e;
-                obs_frameid_linepixel_[i] = pixel_d_coord;
 
 #ifdef __DEBUG__OFF
                 std::cout << ">>>> in the " << i << "th frame, of total " << keyframes_Twcs.size() << "frames:" << std::endl;
@@ -556,10 +560,11 @@ class EnvLine
                 std::cout << "noisy endpoints in cam:" << meas_3d_in_i(0, 0) << "," << meas_3d_in_i(1, 0) << "," << meas_3d_in_i(2, 0) << ";"
                           << meas_3d_in_i(0, 1) << "," << meas_3d_in_i(1, 1) << "," << meas_3d_in_i(2, 1) << std::endl;
 #endif
+                obs_frameid_linepixel_[frame_id] = pixel_d_coord;
                 if (add_noise_to_meas)
-                    obs_frameid_linepos_[i] = meas_3d_in_i;
+                    obs_frameid_linepos_[frame_id] = meas_3d_in_i;
                 else
-                    obs_frameid_linepos_[i] = pos_in_i;
+                    obs_frameid_linepos_[frame_id] = pos_in_i;
 
                 // the distance between gt-line and noisy-line
                 Mat32 distance = meas_3d_in_i - pos_in_i;
@@ -570,7 +575,10 @@ class EnvLine
             }
         }
         if (observed_ < 2) //
+        {
             std::cout << "The " << this->num_id_ << " mapline didn't be detected by any frames." << std::endl;
+            assert(1 == 0);
+        }
     }
 
     bool

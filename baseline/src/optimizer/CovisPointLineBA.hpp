@@ -65,9 +65,7 @@ namespace simulator
                     Para_Point_Feature[mp_id][1] = mp->second(1);
                     Para_Point_Feature[mp_id][2] = mp->second(2);
                     problem.AddParameterBlock(Para_Point_Feature[mp_id], 3);
-                    // ordering
                 }
-
 
                 // add maplines
                 double Para_Line_Feature[opti_para.maplines.size()][4];
@@ -86,11 +84,9 @@ namespace simulator
                     double d = LinePlaneNormal.norm() / LineDirection.norm();
                     LinePlaneNormal = LinePlaneNormal.normalized();
                     LineDirection = LineDirection.normalized();
-                    // Eigen::Vector3d LinePerpendDirection = LinePlaneNormal.cross(LineDirection);
-                    // LinePerpendDirection.normalize();
-                    // double DistanceOri2Line = StartPoint.dot(LinePerpendDirection);
+
                     Eigen::Matrix<double, 6, 1> LinePLK = Eigen::Matrix<double, 6, 1>::Zero(); // Zero();
-                    // LinePLK <<  LinePlaneNormal, DistanceOri2Line * LineDirection;
+
                     LinePLK << d * LinePlaneNormal, LineDirection;
                     // from plk to orth
                     Eigen::Vector4d LineOrth = UtiliLine::plk_to_orth(LinePLK);
@@ -161,7 +157,7 @@ namespace simulator
                         Eigen::Vector2d mp_obser_i = asso_mp_mea->second[i].second;
                         Eigen::Vector2d mp_obser_i_unit((mp_obser_i(0) - cx) / fx, (mp_obser_i(1) - cy) / fy);
 
-                        PointProjectionFactor *f = new PointProjectionFactor(mp_obser_i_unit); // 特征重投影误差
+                        PointProjectionFactor *f = new PointProjectionFactor(mp_obser_i_unit);
                         problem.AddResidualBlock(f, loss_function, Para_Pose[kf_id_i], Para_Point_Feature[mp_id]);
                     }
                 }
@@ -171,7 +167,7 @@ namespace simulator
                 {
                     int ml_id = asso_ml_mea->first;
                     if (opti_para.maplines[ml_id] == Mat32::Zero())
-                        continue;
+                        assert(1 == 0);
                     if (asso_ml_mea->second.size() < min_obser_num) // more than two frames detect this point
                         continue;
 
@@ -190,8 +186,6 @@ namespace simulator
 
                         lineProjectionFactor *f = new lineProjectionFactor(mp_obser_i_unit); // 特征重投影误差
                         problem.AddResidualBlock(f, loss_function, Para_Pose[kf_id_i], Para_Line_Feature[ml_id]);
-
-                        // residual cout
                     }
                 }
 
@@ -241,7 +235,7 @@ namespace simulator
                 {
                     int ml_id = asso_ml_mea->first;
                     if (opti_para.maplines[ml_id] == Mat32::Zero())
-                        continue;
+                        assert(1 == 0);
                     if (asso_ml_mea->second.size() < min_obser_num) // more than two frames detect this point
                         continue;
 
@@ -290,9 +284,6 @@ namespace simulator
 
                     optimized_maplines[ml_id].block(0, 0, 3, 1) = EndPoints3d.head(3);
                     optimized_maplines[ml_id].block(0, 1, 3, 1) = EndPoints3d.tail(3);
-
-                    // std::cout << "original: " << opti_para.maplines[ml_id].block(0,0,3,1).transpose() << "," << opti_para.maplines[ml_id].block(0,1,3,1).transpose() << std::endl;
-                    // std::cout << "optimized: " << optimized_maplines[ml_id].block(0,0,3,1).transpose() << "," << optimized_maplines[ml_id].block(0,1,3,1).transpose() << std::endl;
                 }
                 return;
             }

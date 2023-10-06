@@ -70,14 +70,13 @@ namespace simulator
          *
          */
         Track(std::map<int /*envpoint_id*/, frame_point_meas> &asso_epid_frameid_pos,
-              std::map<int /*envpoint_id*/, frame_point_meas> &asso_epid_frameid_pixeld,
               std::map<int /*frame_id*/, std::vector<std::pair<int /*ep_id*/, Vec3>>> &asso_frameid_epid, // noisy 3D in camera coordinate
               std::map<int /*envline_id*/, frame_line_meas> &asso_elid_frameid_pos,
-              std::map<int /*envline_id*/, frame_line_meas> &asso_elid_frameid_pixeld,
+              std::map<int /*frame_id*/, std::vector<std::pair<int /*el_id*/, Mat32>>> &asso_frameid_elid, // noisy 3D in camera coordinate
               std::map<int /*envparaline_id*/, std::vector<int /*envline_id*/>> asso_paralineid_elids_,
-              std::map<int /*frame_id*/, std::vector<std::pair<int /*el_id*/, Mat32>>> &asso_frameid_elid, // noisy measurement
               Trajectory *robot_trajectory) : robot_traject_(robot_trajectory), paralineid_elids_(asso_paralineid_elids_)
         {
+            // initialization measurements
             obs_point_.clear();
             obs_line_.clear();
             for (auto frameid_epid : asso_frameid_epid)
@@ -104,7 +103,7 @@ namespace simulator
                     if (distance < 0.01)
                     {
                         std::cout << "short distance:" << distance << ",frame:" << frame_idx << ",el_id" << el_id << std::endl;
-                        // assert(0 == 1);
+                        assert(0 == 1);
                     }
 
                     obs_line_[frame_idx].push_back(std::make_pair(el_id, pos_in_cam));
@@ -195,7 +194,6 @@ namespace simulator
                 if (frame_id == 0) // initialization
                 {
                     curr_gt_pose_in_world = frame.second;
-
                     vo_curr_pose_in_world = frame.second;
                     map_curr_pose_in_world = frame.second;
 
@@ -242,6 +240,7 @@ namespace simulator
                 }
                 else
                 {
+                    bool b_skip_fusion = false;
                     DrawMeasurements(obs_point_[frame_id], obs_line_[frame_id], frame_id);
                     // relative pose  T_{prev, curr}
                     vo_curr_pose_in_world = RelativePoseEstimation(vo_prev_pose_in_world,
@@ -268,19 +267,21 @@ namespace simulator
                                           << obs_point_[frame_id][i].second(0) << ","
                                           << obs_point_[frame_id][i].second(1) << ","
                                           << obs_point_[frame_id][i].second(2) << std::endl;
-                            // init local_mappoints
+
+                            // use last_frame's pose
                             map_curr_pose_in_world = map_prev_pose_in_world;
+                            b_skip_fusion = true;
                         }
                     }
 
-                    if (!with_lines)
+                    if (!with_lines && !b_skip_fusion)
                     {
                         if (with_localmap)
                             FuseMapPoint(local_mappoints_, map_curr_pose_in_world, obs_point_[frame_id]);
                         else
                             FuseMapPoint(local_mappoints_, vo_curr_pose_in_world, obs_point_[frame_id]);
                     }
-                    else if (with_lines)
+                    else if (with_lines && !b_skip_fusion)
                     {
                         if (with_localmap)
                         {
@@ -289,15 +290,13 @@ namespace simulator
                         }
                         else
                         {
-
                             FuseMapPoint(local_mappoints_, vo_curr_pose_in_world, obs_point_[frame_id]);
                             FuseMapLine(local_maplines_, vo_curr_pose_in_world, obs_line_[frame_id]);
                         }
                     }
-
                     curr_gt_pose_in_world = frame.second;
                 }
-                // set previous pose
+                // save previous pose
                 map_prev_pose_in_world = map_curr_pose_in_world;
                 vo_prev_pose_in_world = vo_curr_pose_in_world;
 
@@ -406,7 +405,7 @@ namespace simulator
                 {
                     // id
                     int curr_point_id = points_curr[j].first;
-                    if (prev_point_id == curr_point_id)
+                    if (prev_point_id == curr_point_id) // map_point --- frame_point matching
                     {
                         // 2D pixel of the curr_frame
                         Vec3 point_in_curr = points_curr[j].second;
@@ -710,29 +709,36 @@ namespace simulator
             for(auto mit=local_mappoints_.begin(); mit!=local_mappoints_.end(); mit++)
             {
                 int mappoint_id = mit->first;
-                if (mit->second == Vec3::Zero())
+                if (mit->second == Vec3::Zero()) // remove empty landmarks
                     continue;
                 double point_distance = mit->second.norm();
                 if (point_distance < 0.1)
-                    continue;
+                    assert(1 == 0);
+                // continue;
                 mappoints[mappoint_id] = mit->second;
             }
         }
 
-        void GetInitFramePoses(std::map<int /*kf_id*/, Mat4> &kfs)
+        void GetInitFramePoses(std::map<int /*kf_id*/, Mat4> &kfs, bool use_vo_pose = true)
         {
-            for(auto mit=vec_localmap_Twc_.begin(); mit!=vec_localmap_Twc_.end(); mit++)
+            if (!use_vo_pose)
             {
-                int frame_id = mit->first;
-                Mat4 frame_pose = mit->second;
-                kfs[frame_id] = frame_pose;
+                for (auto mit = vec_localmap_Twc_.begin(); mit != vec_localmap_Twc_.end(); mit++)
+                {
+                    int frame_id = mit->first;
+                    Mat4 frame_pose = mit->second;
+                    kfs[frame_id] = frame_pose;
+                }
             }
-            // for(auto mit=vec_vo_Twc_.begin(); mit!=vec_vo_Twc_.end(); mit++)
-            // {
-            //     int frame_id = mit->first;
-            //     Mat4 frame_pose = mit->second;
-            //     kfs[frame_id] = frame_pose;
-            // }
+            else
+            {
+                for (auto mit = vec_vo_Twc_.begin(); mit != vec_vo_Twc_.end(); mit++)
+                {
+                    int frame_id = mit->first;
+                    Mat4 frame_pose = mit->second;
+                    kfs[frame_id] = frame_pose;
+                }
+            }
         }
 
         void GetInitFramePosesVect(std::vector<Mat4> &kfs)
@@ -769,10 +775,12 @@ namespace simulator
             for(auto mit=local_maplines_.begin(); mit!=local_maplines_.end(); mit++)
             {
                 int mapline_id = mit->first;
+                if (mit->second == Mat32::Zero()) // remove empty landmarks
+                    continue;
 
                 double line_length = (mit->second.col(0) - mit->second.col(1)).norm();
-                if (line_length < 0.1)
-                    continue;
+                if (line_length < 0.01)
+                    assert(1 == 0);
                 maplines[mapline_id] = mit->second;
             }
         }

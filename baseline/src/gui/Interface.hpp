@@ -590,12 +590,10 @@ namespace simulator
                     // camera-landmark association
                     ptr_tracker_ = new simulator::Track(
                         ptr_env_manager_->asso_epid_frameid_pos_,
-                        ptr_env_manager_->asso_epid_frameid_pixeld_,
                         ptr_env_manager_->asso_frameid_epid_,
                         ptr_env_manager_->asso_elid_frameid_pos_,
-                        ptr_env_manager_->asso_elid_frameid_pixeld_,
-                        ptr_env_manager_->asso_paralineid_elids_,
                         ptr_env_manager_->asso_frameid_elid_,
+                        ptr_env_manager_->asso_paralineid_elids_,
                         ptr_env_manager_->ptr_robot_trajectory_);
 
                     click_start_track = false;
@@ -792,15 +790,12 @@ namespace simulator
                     // prepare data for optimization
                     if (start_ba)
                     {
-                        ptr_tracker_->GetInitFramePoses(opti_para_.kfs);
+                        ptr_tracker_->GetInitFramePoses(opti_para_.kfs, true /*localmap or relative pose*/);
                         // global position
                         ptr_tracker_->GetInitMapPoints(opti_para_.mappoints);
                         ptr_tracker_->GetInitMapLines(opti_para_.maplines);
                         ptr_env_manager_->GetAssoMPMeas(opti_para_.asso_mp_meas);
-                        ptr_env_manager_->GetAssoFrameMPs(opti_para_.mp_obsers);
                         ptr_env_manager_->GetAssoMLMeas(opti_para_.asso_ml_meas);
-                        ptr_env_manager_->GetAssoMLMeasD(opti_para_.asso_ml_posi);
-                        ptr_env_manager_->GetAssoFrameMLs(opti_para_.mp_obsers);
                         // TODO
                         ptr_env_manager_->GetAssoParalis(opti_para_.asso_paralineid_mlids);
                         click_start_opti = false;
@@ -997,8 +992,6 @@ namespace simulator
 
             if (read_open_structure)
             {
-                std::cout << "effewa" << std::endl;
-
                 ptr_env_manager_->BuildPublicPoints();
                 ptr_env_manager_->GetEnvPoints(points_gt_); // for visualizaiton
                 ptr_env_manager_->BuildPublicLines();

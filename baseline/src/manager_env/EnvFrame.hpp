@@ -47,9 +47,9 @@ namespace simulator
                 // parameters
                 settings["Camera.width"] >> width;
                 settings["Camera.height"] >> height;
-                std::cout<<"width:"<<width<<","<<height<<std::endl;
+                // std::cout<<"width:"<<width<<","<<height<<std::endl;
                 // init image
-                
+
                 // img = cv::Mat(height, width, CV_8UC3, cv::Scalar(255, 255, 255));
 
 

@@ -969,15 +969,15 @@ namespace simulator
                          << std::endl;
                 }
             }
-            // for(auto &asso_paralineid_mlid : opti_para.asso_paralineid_mlids)
-            // {
-            //     int vd_id = asso_paralineid_mlid.first;
-            //     int mls_size = asso_paralineid_mlid.second.size();
-            //     file<< "ParalineMaplineAsso: " << vd_id <<" " << mls_size<< " ";
-            //     for(int i = 0; i<asso_paralineid_mlid.second.size(); i++)
-            //         file<< asso_paralineid_mlid.second.at(i) << " ";
-            //     file<<std::endl;
-            // }
+            for (auto &asso_paralineid_mlid : opti_para.asso_paralineid_mlids)
+            {
+              int vd_id = asso_paralineid_mlid.first;
+              int mls_size = asso_paralineid_mlid.second.size();
+              file << "ParalineMaplineAsso: " << vd_id << " " << mls_size << " ";
+              for (int i = 0; i < asso_paralineid_mlid.second.size(); i++)
+                file << asso_paralineid_mlid.second.at(i) << " ";
+              file << std::endl;
+            }
             file.close();  
         }
   } // namespace IO
