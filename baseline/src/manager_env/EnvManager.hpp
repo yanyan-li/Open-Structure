@@ -856,9 +856,9 @@ namespace simulator
                 for (auto observation : meas.second)
                 {
                     int frame_id = observation.first;
-                    std::cout << "mp_id:" << mp_id << "," << frame_id
-                              << "," << observation.second
-                              << "," << asso_epid_frameid_pixeld_[mp_id][frame_id] << std::endl;
+                    // std::cout << "mp_id:" << mp_id << "," << frame_id
+                    //           << "," << observation.second
+                    //           << "," << asso_epid_frameid_pixeld_[mp_id][frame_id] << std::endl;
                     if (observation.second.x() != asso_epid_frameid_pixeld_[mp_id][frame_id].x())
                     {
                         assert(1 == 0);

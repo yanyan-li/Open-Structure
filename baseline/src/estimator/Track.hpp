@@ -929,10 +929,10 @@ namespace simulator
             for (auto para_group : paralineid_elids_)
             {
                 int vd_id = para_group.first;
-                std::cout << "vd_id:" << vd_id << std::endl;
+                // std::cout << "vd_id:" << vd_id << std::endl;
                 for (int i = 0; i < para_group.second.size(); i++)
                 {
-                    std::cout << "line_id:" << para_group.second[i] << ". this line:" << line_id << std::endl;
+                    // std::cout << "line_id:" << para_group.second[i] << ". this line:" << line_id << std::endl;
                     if (para_group.second[i] == line_id)
                     {
                         color_label[0] = int(simulator::color_table[(vd_id + 1) % 10][0] * 255);
