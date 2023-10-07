@@ -233,11 +233,15 @@ namespace simulator
                 // update maplines
                 for (auto asso_ml_mea = opti_para.asso_ml_meas.begin(); asso_ml_mea != opti_para.asso_ml_meas.end(); asso_ml_mea++)
                 {
+                    //
+
                     int ml_id = asso_ml_mea->first;
                     if (opti_para.maplines[ml_id] == Mat32::Zero())
                         assert(1 == 0);
                     if (asso_ml_mea->second.size() < min_obser_num) // more than two frames detect this point
                         continue;
+
+                    std::cout << "optimized_maplines_:" << std::endl;
 
                     Eigen::Vector4d optimized_mapline_orth;
                     optimized_mapline_orth << Para_Line_Feature[ml_id][0],
@@ -284,7 +288,9 @@ namespace simulator
 
                     optimized_maplines[ml_id].block(0, 0, 3, 1) = EndPoints3d.head(3);
                     optimized_maplines[ml_id].block(0, 1, 3, 1) = EndPoints3d.tail(3);
+                    std::cout << "optimized:" << optimized_maplines[ml_id] << std::endl;
                 }
+                std::cout << "optimized_maplines: " << optimized_maplines.size() << std::endl;
                 return;
             }
         };

@@ -381,6 +381,7 @@ namespace simulator
                             Twcs_true_.push_back(tws.second);
                         for (auto mit = optimized_maplines_.begin(); mit != optimized_maplines_.end(); mit++)
                         {
+                            std::cout << "mit->second: " << mit->second << std::endl;
                             lines_refined.push_back(mit->second);
                         }
                         for (auto mit = optimized_mappoints_.begin(); mit != optimized_mappoints_.end(); mit++)
@@ -790,12 +791,13 @@ namespace simulator
                     // prepare data for optimization
                     if (start_ba)
                     {
-                        ptr_tracker_->GetInitFramePoses(opti_para_.kfs, true /*localmap or relative pose*/);
+                        ptr_tracker_->GetInitFramePoses(opti_para_.kfs, false /*localmap or relative pose*/);
                         // global position
                         ptr_tracker_->GetInitMapPoints(opti_para_.mappoints);
                         ptr_tracker_->GetInitMapLines(opti_para_.maplines);
                         ptr_env_manager_->GetAssoMPMeas(opti_para_.asso_mp_meas);
                         ptr_env_manager_->GetAssoMLMeas(opti_para_.asso_ml_meas);
+                        ptr_env_manager_->GetAssoMLMeasD(opti_para_.asso_ml_posi);
                         // TODO
                         ptr_env_manager_->GetAssoParalis(opti_para_.asso_paralineid_mlids);
                         click_start_opti = false;
