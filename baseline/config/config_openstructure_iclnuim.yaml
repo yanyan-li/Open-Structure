@@ -34,10 +34,10 @@ Env.Map.env_height: 8
 Env.Map.env_length: 7
 
 Env.ReadOpenStructure.bool: 1
-Env.Public.envtraj_path: "../../dataset/1002/datasets/lrkt0/camera_poses.txt"
-Env.Public.envpoint_path: "../../dataset/1002/datasets/lrkt0/point_landmarks.txt" #results/V103/3DMap_registered.txt"
-Env.Public.envline_path: "../../dataset/1002/datasets/lrkt0/line_landmarks.txt"
-Env.Public.associate_path: "../../dataset/1002/datasets/lrkt0/association.txt"
+Env.Public.envtraj_path: "../../dataset/1002/datasets/office0/camera_poses.txt"
+Env.Public.envpoint_path: "../../dataset/1002/datasets/office0/point_landmarks.txt" #results/V103/3DMap_registered.txt"
+Env.Public.envline_path: "../../dataset/1002/datasets/office0/line_landmarks.txt"
+Env.Public.associate_path: "../../dataset/1002/datasets/office0/association.txt"
 
 Env.Public.envtraj_num: 633
 Env.Public.envpoint_num: 2560

@@ -999,15 +999,13 @@ namespace simulator
                 ptr_env_manager_->BuildPublicLines();
                 ptr_env_manager_->GetEnvLines(lines_gt_); // for visualizaiton
                 ptr_env_manager_->GetEnvLinesStructLabel(lines_structlabel_gt_);
-#if __TEST__OFF
+                // #if __TEST__
                 // test parallel
                 ptr_env_manager_->BuildPublicParalines();
-#endif
+                // #endif
             }
             else // user design
             {
-                std::cout << "ewer4g" << std::endl;
-
                 // env_points
                 ptr_env_manager_->BuildEnvPoints();         // build ground truth points
                 ptr_env_manager_->GetEnvPoints(points_gt_); // for visualizaiton

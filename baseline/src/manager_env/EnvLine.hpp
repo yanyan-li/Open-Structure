@@ -541,10 +541,9 @@ class EnvLine
                     AddNoise(pixel_d_coord_e, meas_3d_coord_e);
                     meas_3d_in_i.block(0, 0, 3, 1) = meas_3d_coord_s;
                     meas_3d_in_i.block(0, 1, 3, 1) = meas_3d_coord_e;
+                    if (meas_3d_coord_s.z() < 0.01 || meas_3d_coord_e.z() < 0.01)
+                        assert(1 == 0);
                 }
-
-                if (meas_3d_coord_s.z() < 0.01 || meas_3d_coord_e.z() < 0.01)
-                    assert(1 == 0);
 
                 pixel_d_coord.block(0, 0, 3, 1) = pixel_d_coord_s;
                 pixel_d_coord.block(0, 1, 3, 1) = pixel_d_coord_e;

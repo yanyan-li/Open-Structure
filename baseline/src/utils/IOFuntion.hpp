@@ -649,6 +649,49 @@ namespace simulator
       mp_file.close();
     }
 
+    void MapLineRecord(const std::string &file_path,
+                       std::vector<std::pair<int, Mat32>> maplines)
+    {
+      std::cout << "\033[0;33m[Venom Simulator Printer] record gt "
+                   "maplines to "
+                << file_path << ".\033[0m" << std::endl;
+
+      std::ofstream mp_file;
+      mp_file.open(file_path);
+
+      for (auto &mapline : maplines)
+      {
+        int ml_id = mapline.first;
+        if (mapline.second.isZero())
+          continue;
+        mp_file << "Mapline:" << ml_id << " " << mapline.second(0, 0) << " " << mapline.second(1, 0)
+                << " " << mapline.second(2, 0) << " " << mapline.second(0, 1) << " " << mapline.second(1, 1)
+                << " " << mapline.second(2, 1)
+                << std::endl;
+      }
+      mp_file.close();
+    }
+
+    void MapPointRecord(const std::string &file_path, std::vector<std::pair<int, Eigen::Vector3d>> mappoints)
+    {
+      std::cout << "\033[0;33m[Venom Simulator Printer] record gt "
+                   "maplines to "
+                << file_path << ".\033[0m" << std::endl;
+
+      std::ofstream mp_file;
+      mp_file.open(file_path);
+
+      for (auto &mappoint : mappoints)
+      {
+        int mp_id = mappoint.first;
+        if (mappoint.second.isZero())
+          continue;
+        mp_file << "Mappoint:" << mp_id << " " << mappoint.second(0, 0) << " " << mappoint.second(1, 0)
+                << " " << mappoint.second(2, 0) << std::endl;
+      }
+      mp_file.close();
+    }
+
     void CovisibilityGraphRecord(
         const std::string &file_path,
         std::map<

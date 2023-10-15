@@ -1,21 +1,12 @@
-/***
- * @Author: liyanyan liyanyan@meta-bounds.com
- * @Date: 2022-12-20 11:07:32
- * @LastEditTime: 2022-12-21 09:41:00
- * @LastEditors: liyanyan liyanyan@meta-bounds.com
- * @Description:
- * @FilePath:
- */
 #ifndef __VENOM_SRC_OPTIMIZER_C_BUNDLEADJUSTMENT__
 #define __VENOM_SRC_OPTIMIZER_C_BUNDLEADJUSTMENT__
 
 #include <ceres/ceres.h>
 
-#include "src/manager_env/EnvTrajectory.hpp" 
+#include "src/manager_env/EnvTrajectory.hpp"
+#include "src/optimizer/factor/LineProjectionFactor.hpp"
 #include "src/optimizer/parametrization/line_parameterization.hpp"
 #include "src/optimizer/parametrization/pose_local_parameterization.hpp"
-// #include "src/optimizer/factor/GenericLineProjectionFactor.hpp"
-#include "src/optimizer/factor/LineProjectionFactor.hpp"
 #include "src/utils/UtilTransformer.hpp"
 
 namespace simulator
@@ -39,7 +30,7 @@ namespace simulator
                 constexpr int min_obser_num = 3;
                 const float huber_thres = 1.5;
                 const float pixel_sigma = 1.5;
-                
+
                 // intrinsic
                 double fx, fy, cx, cy;
 
@@ -47,15 +38,17 @@ namespace simulator
                 fy = ptr_robot_trajectory->cam_intri.fy;
                 cx = ptr_robot_trajectory->cam_intri.cx;
                 cy = ptr_robot_trajectory->cam_intri.cy;
-                
+
                 // construct ceres optim parameters
                 ceres::Problem problem;
                 ceres::LossFunction *loss_function;
                 ceres::ParameterBlockOrdering *ordering = new ceres::ParameterBlockOrdering();
                 loss_function = new ceres::CauchyLoss(1.0);
-                 
+
                 // add mappoints
-                double Para_Point_Feature[opti_para.mappoints.size()][3];
+                // double Para_Point_Feature[opti_para.mappoints.size()][3];
+                auto iteration_pt = opti_para.mappoints.rbegin();
+                double Para_Point_Feature[iteration_pt->first + 1][3];
                 for (auto mp = opti_para.mappoints.begin(); mp != opti_para.mappoints.end(); mp++)
                 {
                     int mp_id = mp->first;
@@ -68,14 +61,16 @@ namespace simulator
                 }
 
                 // add maplines
-                double Para_Line_Feature[opti_para.maplines.size()][4];
+                // double Para_Line_Feature[opti_para.maplines.size()][4];
+                auto iteration_ml = opti_para.maplines.rbegin();
+                double Para_Line_Feature[iteration_ml->first + 1][4];
                 for (auto ml = opti_para.maplines.begin(); ml != opti_para.maplines.end(); ml++)
                 {
                     int ml_id = ml->first;
                     if (opti_para.maplines[ml_id] == Mat32::Zero())
                         continue;
                     double line_length = (opti_para.maplines[ml_id].col(0) - opti_para.maplines[ml_id].col(1)).norm();
-                    if (line_length < 0.1)
+                    if (line_length < 0.01)
                         assert(1 == 0);
                     Eigen::Vector3d StartPoint = ml->second.col(0);
                     Eigen::Vector3d EndPoint = ml->second.col(1);
@@ -84,9 +79,7 @@ namespace simulator
                     double d = LinePlaneNormal.norm() / LineDirection.norm();
                     LinePlaneNormal = LinePlaneNormal.normalized();
                     LineDirection = LineDirection.normalized();
-
                     Eigen::Matrix<double, 6, 1> LinePLK = Eigen::Matrix<double, 6, 1>::Zero(); // Zero();
-
                     LinePLK << d * LinePlaneNormal, LineDirection;
                     // from plk to orth
                     Eigen::Vector4d LineOrth = UtiliLine::plk_to_orth(LinePLK);
@@ -181,10 +174,8 @@ namespace simulator
                             (ml_obser_i(1) - cy) / fy,
                             (ml_obser_i(2) - cx) / fx,
                             (ml_obser_i(3) - cy) / fy);
-                        // std::cout<<"s: "<< ml_obser_i <<std::endl;
-                        // std::cout<<"uni: "<< mp_obser_i_unit <<std::endl;
 
-                        lineProjectionFactor *f = new lineProjectionFactor(mp_obser_i_unit); // 特征重投影误差
+                        lineProjectionFactor *f = new lineProjectionFactor(mp_obser_i_unit);
                         problem.AddResidualBlock(f, loss_function, Para_Pose[kf_id_i], Para_Line_Feature[ml_id]);
                     }
                 }
@@ -192,7 +183,7 @@ namespace simulator
                 // slove ceres problem
                 ceres::Solver::Options options;
                 options.linear_solver_type = ceres::SPARSE_SCHUR;
-                options.max_num_iterations = 15;
+                options.max_num_iterations = 100;
                 options.minimizer_progress_to_stdout = true;
                 // options.max_num_iterations = 5;
                 ceres::Solver::Summary summary;
@@ -241,7 +232,7 @@ namespace simulator
                     if (asso_ml_mea->second.size() < min_obser_num) // more than two frames detect this point
                         continue;
 
-                    std::cout << "optimized_maplines_:" << std::endl;
+                    // std::cout << "optimized_maplines_:" << std::endl;
 
                     Eigen::Vector4d optimized_mapline_orth;
                     optimized_mapline_orth << Para_Line_Feature[ml_id][0],
@@ -249,48 +240,18 @@ namespace simulator
                         Para_Line_Feature[ml_id][2],
                         Para_Line_Feature[ml_id][3];
 
-                    Eigen::Matrix<double, 6, 1> opti_ml_plk = UtiliLine::orth_to_plk(optimized_mapline_orth);
+                    Eigen::Vector3d endpoint_s = opti_para.maplines[ml_id].col(0);
+                    Eigen::Vector3d endpoint_e = opti_para.maplines[ml_id].col(1);
 
-                    Vector6d EndPoints3d;
-                    EndPoints3d << 0, 0, 0, 0, 0, 0;
-                    int obser_num = 0;
+                    Eigen::Matrix<double, 6, 1>
+                        opti_ml_plk = UtiliLine::orth_to_plk(optimized_mapline_orth);
+                    Vector6d endpoints = UtiliLine::plk_to_endpoints(opti_ml_plk, opti_para.maplines[ml_id]);
 
-                    for (int i = 0; i < asso_ml_mea->second.size(); i++)
-                    {
-                        Eigen::Vector4d ml_obser = asso_ml_mea->second[i].second;
-                        Eigen::Vector4d mp_obser_i_unit(
-                            (ml_obser(0) - cx) / fx,
-                            (ml_obser(1) - cy) / fy,
-                            (ml_obser(2) - cx) / fx,
-                            (ml_obser(3) - cy) / fy);
+                    optimized_maplines[ml_id].block(0, 0, 3, 1) = endpoints.head(3);
+                    optimized_maplines[ml_id].block(0, 1, 3, 1) = endpoints.tail(3);
 
-                        int kf_id_i = asso_ml_mea->second[i].first;
-                        Eigen::Matrix4d Twc = optimized_poses[kf_id_i];
-
-                        Vector6d EndPoints3d_i = UtiliLine::plk_to_endpoints(opti_ml_plk, mp_obser_i_unit, Twc);
-                        Eigen::Vector3d EndPoints3d_i_s_distance = EndPoints3d_i.head(3) - EndPoints3d.head(3);
-                        Eigen::Vector3d EndPoints3d_i_e_distance = EndPoints3d_i.tail(3) - EndPoints3d.head(3);
-                        double line_length = (EndPoints3d_i.head(3) - EndPoints3d_i.tail(3)).norm();
-                        if (line_length < 0.1)
-                            continue;
-                        obser_num++;
-                        if (EndPoints3d_i_s_distance.norm() < EndPoints3d_i_e_distance.norm())
-                        {
-                            EndPoints3d += EndPoints3d_i;
-                        }
-                        else
-                        {
-                            EndPoints3d.head(3) = EndPoints3d.head(3) + EndPoints3d_i.tail(3);
-                            EndPoints3d.tail(3) = EndPoints3d.tail(3) + EndPoints3d_i.head(3);
-                        }
-                    }
-                    EndPoints3d = EndPoints3d / obser_num;
-
-                    optimized_maplines[ml_id].block(0, 0, 3, 1) = EndPoints3d.head(3);
-                    optimized_maplines[ml_id].block(0, 1, 3, 1) = EndPoints3d.tail(3);
-                    std::cout << "optimized:" << optimized_maplines[ml_id] << std::endl;
+                    std::cout << "ml_id:" << ml_id << "optimized:" << optimized_maplines[ml_id] << std::endl;
                 }
-                std::cout << "optimized_maplines: " << optimized_maplines.size() << std::endl;
                 return;
             }
         };

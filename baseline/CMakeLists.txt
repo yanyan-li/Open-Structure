@@ -18,8 +18,8 @@ set(CMAKE_CXX_STANDARD 17)
 find_package(Pangolin REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(Eigen3 3.1.0 REQUIRED)
-MESSAGE("OPENCV VERSION:")
-MESSAGE(${OpenCV_VERSION})
+MESSAGE("OPENCV VERSION:" ${OpenCV_VERSION})
+MESSAGE("Pangolin VERSION:" ${Pangolin_VERSION})
 
 option(VERBOSE "Venom Similator Printer" ON)
 option(DEBUG "Venom Similator Debug" ON)
@@ -35,7 +35,6 @@ endif()
 
 # installed later if you need
 find_package(Ceres REQUIRED)  # required version-1.14
-
 SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 SET(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
@@ -48,10 +47,8 @@ INCLUDE_DIRECTORIES(
         ${CERES_INCLUDE_DIRS}
         ${PROJECT_SOURCE_DIR}
 )
-add_subdirectory(thirdparty)
 
 file(GLOB SOURCEFILES ${PROJECT_SOURCE_DIR}/src/*/*.hpp ${PROJECT_SOURCE_DIR}/src/*/*.cc ${PROJECT_SOURCE_DIR}/src/*/*/*.cc)
-#file(GLOB SOURCEFILES src/*.hpp)
 
 add_library(VenomLib SHARED ${SOURCEFILES})
 target_link_libraries(VenomLib
@@ -59,32 +56,30 @@ target_link_libraries(VenomLib
         ${EIGEN3_LIBS}
         ${Pangolin_LIBRARIES}
         ${CERES_LIBRARIES})
-        #gtsam)
 
 #########---simulation interface---###################
 add_executable(start_venom examples/main_entrance.cc)
 target_link_libraries(start_venom VenomLib ${CMAKE_THREAD_LIBS_INIT}) 
 
-
 if(Examples_run)
-add_executable(test_draw_corridor examples/test_draw_corridor.cc)
-target_link_libraries(test_draw_corridor VenomLib ${CMAKE_THREAD_LIBS_INIT}) 
+ add_executable(test_draw_corridor examples/test_draw_corridor.cc)
+ target_link_libraries(test_draw_corridor VenomLib ${CMAKE_THREAD_LIBS_INIT}) 
 
-add_executable(test_draw_corridor_trajectory examples/test_draw_cooridor_trajectory.cc)
-target_link_libraries(test_draw_corridor_trajectory VenomLib ${CMAKE_THREAD_LIBS_INIT}) 
+ add_executable(test_draw_corridor_trajectory examples/test_draw_cooridor_trajectory.cc)
+ target_link_libraries(test_draw_corridor_trajectory VenomLib ${CMAKE_THREAD_LIBS_INIT}) 
 
-add_executable(test_draw_corridor_envpoint examples/test_draw_corridor_envpoint.cc)
-target_link_libraries(test_draw_corridor_envpoint VenomLib ${CMAKE_THREAD_LIBS_INIT}) 
+ add_executable(test_draw_corridor_envpoint examples/test_draw_corridor_envpoint.cc)
+ target_link_libraries(test_draw_corridor_envpoint VenomLib ${CMAKE_THREAD_LIBS_INIT}) 
 
-add_executable(test_draw_corridor_envpl examples/test_draw_corrifor_envpointline.cc)
-target_link_libraries(test_draw_corridor_envpl VenomLib ${CMAKE_THREAD_LIBS_INIT})
+ add_executable(test_draw_corridor_envpl examples/test_draw_corrifor_envpointline.cc)
+ target_link_libraries(test_draw_corridor_envpl VenomLib ${CMAKE_THREAD_LIBS_INIT})
 
-add_executable(test_draw_room_envpl examples/test_draw_room_envpointline.cc)
-target_link_libraries(test_draw_room_envpl VenomLib ${CMAKE_THREAD_LIBS_INIT})
+ add_executable(test_draw_room_envpl examples/test_draw_room_envpointline.cc)
+ target_link_libraries(test_draw_room_envpl VenomLib ${CMAKE_THREAD_LIBS_INIT})
 
-add_executable(test_draw_box_envpl examples/test_draw_objects_envpointline.cc)
-target_link_libraries(test_draw_box_envpl VenomLib ${CMAKE_THREAD_LIBS_INIT})
+ add_executable(test_draw_box_envpl examples/test_draw_objects_envpointline.cc)
+ target_link_libraries(test_draw_box_envpl VenomLib ${CMAKE_THREAD_LIBS_INIT})
 
-add_executable(test_draw_new_line examples/test_line_rect_intersection.cc)
-target_link_libraries(test_draw_new_line VenomLib ${CMAKE_THREAD_LIBS_INIT})
+ add_executable(test_draw_new_line examples/test_line_rect_intersection.cc)
+ target_link_libraries(test_draw_new_line VenomLib ${CMAKE_THREAD_LIBS_INIT})
 endif()

@@ -53,21 +53,22 @@ namespace simulator
                 loss_function = new ceres::CauchyLoss(1.0);
 
                 // add mappoints
-                // TODO: risks in opti_para.mappoints.size() and landmark_id
-                double Para_Point_Feature[opti_para.mappoints.size()][3];
-                for(auto mp = opti_para.mappoints.begin(); mp!= opti_para.mappoints.end(); mp++)
+                // double Para_Point_Feature[opti_para.mappoints.size()][3];
+                auto iteration = opti_para.mappoints.rbegin();
+                double Para_Point_Feature[iteration->first + 1][3];
+                for (auto mp = opti_para.mappoints.begin(); mp != opti_para.mappoints.end(); mp++)
                 {
                     int mp_id = mp->first;
 
-                    if (opti_para.mappoints[mp_id] == Vec3::Zero())
-                        continue;
+                    // if (opti_para.mappoints[mp_id] == Vec3::Zero())
+                    //     continue;
                     double point_distance = opti_para.mappoints[mp_id].norm();
                     if (point_distance < 0.01)
                         assert(0 == 1);
                     Para_Point_Feature[mp_id][0] = mp->second(0);
                     Para_Point_Feature[mp_id][1] = mp->second(1);
                     Para_Point_Feature[mp_id][2] = mp->second(2);
-                    // std::cout<<mp->second(0)<<std::endl;
+                    // std::cout << "id:" << mp_id << "," << mp->second(0) << "," << mp->second(1) << std::endl;
                     problem.AddParameterBlock(Para_Point_Feature[mp_id], 3);
                     // ordering 
                 }
@@ -100,7 +101,7 @@ namespace simulator
                 {
                     int mp_id = asso_mp_mea->first;
                     if(opti_para.mappoints[mp_id]==Vec3::Zero())
-                        continue;
+                        assert(1 == 0);
                     if(asso_mp_mea->second.size() < min_obser_num) // more than two frames detect this point
                         continue;
 
@@ -119,12 +120,21 @@ namespace simulator
                 // slove ceres problem
                 ceres::Solver::Options options;
                 options.minimizer_progress_to_stdout = true;
-                options.max_num_iterations = 15;
-                options.linear_solver_type = ceres::DENSE_SCHUR;
+                // options.max_num_iterations = 15;
+                // options.linear_solver_type = ceres::DENSE_SCHUR;
+                options.linear_solver_type = ceres::ITERATIVE_SCHUR;
+                options.trust_region_strategy_type = ceres::LEVENBERG_MARQUARDT;
+                options.update_state_every_iteration = true;
+                // options.gradient_tolerance = 1e-3;
+                // options.function_tolerance = 1e-4;
+                options.max_num_iterations = 100;
+
                 ceres::Solver::Summary summary;
                 ceres::Solve (options, &problem, & summary);
+
 #if __VERBOSE__
-                std::cout << summary.FullReport() << std::endl;
+                std::cout
+                    << summary.FullReport() << std::endl;
 #endif
                 // update ceres results
                 for (auto kf =  opti_para.kfs.begin(); kf !=  opti_para.kfs.end(); kf++)

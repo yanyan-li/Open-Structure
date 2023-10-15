@@ -274,24 +274,24 @@ namespace simulator
                         }
                     }
 
-                    if (!with_lines && !b_skip_fusion)
+                    if (!with_lines)
                     {
                         if (with_localmap)
-                            FuseMapPoint(local_mappoints_, map_curr_pose_in_world, obs_point_[frame_id]);
+                            FuseMapPoint(local_mappoints_, map_curr_pose_in_world, obs_point_[frame_id], b_skip_fusion);
                         else
-                            FuseMapPoint(local_mappoints_, vo_curr_pose_in_world, obs_point_[frame_id]);
+                            FuseMapPoint(local_mappoints_, vo_curr_pose_in_world, obs_point_[frame_id], b_skip_fusion);
                     }
-                    else if (with_lines && !b_skip_fusion)
+                    else if (with_lines)
                     {
                         if (with_localmap)
                         {
-                            FuseMapPoint(local_mappoints_, map_curr_pose_in_world, obs_point_[frame_id]);
-                            FuseMapLine(local_maplines_, map_curr_pose_in_world, obs_line_[frame_id]);
+                            FuseMapPoint(local_mappoints_, map_curr_pose_in_world, obs_point_[frame_id], b_skip_fusion);
+                            FuseMapLine(local_maplines_, map_curr_pose_in_world, obs_line_[frame_id], b_skip_fusion);
                         }
                         else
                         {
-                            FuseMapPoint(local_mappoints_, vo_curr_pose_in_world, obs_point_[frame_id]);
-                            FuseMapLine(local_maplines_, vo_curr_pose_in_world, obs_line_[frame_id]);
+                            FuseMapPoint(local_mappoints_, vo_curr_pose_in_world, obs_point_[frame_id], b_skip_fusion);
+                            FuseMapLine(local_maplines_, vo_curr_pose_in_world, obs_line_[frame_id], b_skip_fusion);
                         }
                     }
                     curr_gt_pose_in_world = frame.second;
@@ -493,7 +493,7 @@ namespace simulator
 
         void FuseMapPoint(std::map<int /*mappoint_id*/, Vec3 /*posi_in_w*/> &local_map,
                           Eigen::Matrix4d &pose_curr_in_w,
-                          std::vector<std::pair<int /*point_id*/, Vec3>> &points_curr)
+                          std::vector<std::pair<int /*point_id*/, Vec3>> &points_curr, bool b_skip_fusion = false)
         {
             for (int j = 0; j < points_curr.size(); j++)
             {
@@ -512,15 +512,22 @@ namespace simulator
                 {
                     // fuse
                     // TODO: (weights)
-                    point_in_w = (0.8 * point_in_w + 0.2 * new_mappoint);
-                    local_map[curr_point_id] = point_in_w;
+                    if (!b_skip_fusion)
+                    {
+                        point_in_w = (0.8 * point_in_w + 0.2 * new_mappoint);
+                        local_map[curr_point_id] = point_in_w;
+                    }
+                    // else
+                    // {
+
+                    // }
                 }
             }
         }
 
         void FuseMapLine(std::map<int /*mapline_id*/, Mat32> &local_map,
                          Eigen::Matrix4d &pose_curr_in_w,
-                         std::vector<std::pair<int /*line_id*/, Mat32 /*posi_in_cam*/>> &lines_curr)
+                         std::vector<std::pair<int /*line_id*/, Mat32 /*posi_in_cam*/>> &lines_curr, bool b_skip_fusion = false)
         {
             for (size_t j = 0; j < lines_curr.size(); j++)
             {
@@ -553,34 +560,37 @@ namespace simulator
                     // fuse
                     // line_in_w = (line_in_w+new_mapline)/2;
                     // local_map[curr_line_id] = line_in_w;
-                    double localmap_distance = (line_in_w.col(0) - line_in_w.col(1)).norm();
-                    Mat32 new_endpoints;
-                    new_endpoints.col(0) = new_mapline_s;
-                    new_endpoints.col(1) = new_mapline_e;
-
-                    if (localmap_distance > new_distance)
+                    if (!b_skip_fusion)
                     {
-                        new_endpoints.col(0) = line_in_w.col(0);
-                        new_endpoints.col(1) = line_in_w.col(1);
+                        double localmap_distance = (line_in_w.col(0) - line_in_w.col(1)).norm();
+                        Mat32 new_endpoints;
+                        new_endpoints.col(0) = new_mapline_s;
+                        new_endpoints.col(1) = new_mapline_e;
+
+                        if (localmap_distance > new_distance)
+                        {
+                            new_endpoints.col(0) = line_in_w.col(0);
+                            new_endpoints.col(1) = line_in_w.col(1);
+                        }
+
+                        // Eigen ::Vector3d EndPoints3d_i_s_distance = new_mapline.col(0) - line_in_w.col(0);
+
+                        Vec3 mid_point = (new_endpoints.col(0) + new_endpoints.col(1)) / 2;
+                        // from 1 to 0
+                        Vec3 direction_w = (line_in_w.col(0) - line_in_w.col(1)).normalized();
+                        if (direction_w.dot(new_direction) > 0.85)
+                            direction_w = (0.8 * direction_w + 0.2 * new_direction).normalized();
+                        else if (direction_w.dot(new_direction) < -0.85)
+                            direction_w = (0.8 * direction_w - 0.2 * new_direction).normalized();
+
+                        Vec3 direc_mid_s = mid_point - new_endpoints.col(1);
+                        local_map[curr_line_id].col(1) = mid_point - (direc_mid_s.dot(direction_w)) * direction_w;
+
+                        Vec3 direc_mid_e = new_endpoints.col(0) - mid_point;
+                        local_map[curr_line_id].col(0) = mid_point + (direc_mid_e.dot(direction_w)) * direction_w;
+
+                        Eigen::Vector3d EndPoints3d_i_e_distance = new_mapline.col(1) - new_endpoints.col(0);
                     }
-
-                    // Eigen ::Vector3d EndPoints3d_i_s_distance = new_mapline.col(0) - line_in_w.col(0);
-
-                    Vec3 mid_point = (new_endpoints.col(0) + new_endpoints.col(1)) / 2;
-                    // from 1 to 0
-                    Vec3 direction_w = (line_in_w.col(0) - line_in_w.col(1)).normalized();
-                    if (direction_w.dot(new_direction) > 0.85)
-                        direction_w = (0.8 * direction_w + 0.2 * new_direction).normalized();
-                    else if (direction_w.dot(new_direction) < -0.85)
-                        direction_w = (0.8 * direction_w - 0.2 * new_direction).normalized();
-
-                    Vec3 direc_mid_s = mid_point - new_endpoints.col(1);
-                    local_map[curr_line_id].col(1) = mid_point - (direc_mid_s.dot(direction_w)) * direction_w;
-
-                    Vec3 direc_mid_e = new_endpoints.col(0) - mid_point;
-                    local_map[curr_line_id].col(0) = mid_point + (direc_mid_e.dot(direction_w)) * direction_w;
-
-                    Eigen::Vector3d EndPoints3d_i_e_distance = new_mapline.col(1) - new_endpoints.col(0);
                 }
             }
         }
@@ -649,7 +659,7 @@ namespace simulator
             int reconstructed_xyz_id = point_obs.size();
             int mappoint_id = -1;
             // observations
-            for (auto &ob : point_obs)
+            for (auto ob : point_obs)
             {
                 mappoint_id += 1;
 
@@ -837,7 +847,8 @@ namespace simulator
             // write image
             cv::Mat img = cv::Mat(480, 640, CV_8UC3, cv::Scalar(255, 255, 255));
             int font_face = cv::FONT_HERSHEY_COMPLEX;
-            double font_scale = 0.5;
+            double font_scale = 1;
+            // 0.5;
             int thickness = 1;
             std::string text = "frame " + std::to_string(frame_idx);
             cv::putText(img, text, cv::Point(30, 30), font_face, font_scale, cv::Scalar(125, 0, 125), thickness, 8, 0);
@@ -851,7 +862,7 @@ namespace simulator
                 Eigen::Vector2d pixel_curr;
                 // std::cout<<"point_in_c:"<<point_in_c.z()<<std::endl;
                 GetPixelPosition(point_in_c, pixel_curr);
-                cv::circle(img, cv::Point(pixel_curr(0), pixel_curr(1)), 1,
+                cv::circle(img, cv::Point(pixel_curr(0), pixel_curr(1)), 3,
                            cv::Scalar(0, 255, 0));
                 if (b_show_feature_id)
                     cv::putText(img, std::to_string(mp_id), cv::Point(pixel_curr(0), pixel_curr(1)), font_face, font_scale, cv::Scalar(0, 255, 0), thickness, 8, 0);
@@ -865,14 +876,14 @@ namespace simulator
                 Eigen::Vector2d s_pixel_curr, e_pixel_curr;
                 GetPixelPosition(s_line_in_c, s_pixel_curr);
                 GetPixelPosition(e_line_in_c, e_pixel_curr);
-                cv::Scalar color = cv::Scalar(0, 0, 255);
+                cv::Scalar color = cv::Scalar(0, 0, 0);
                 GetParallelLabel(ml_id, color);
                 cv::line(img, cv::Point(s_pixel_curr(0), s_pixel_curr(1)), cv::Point(e_pixel_curr(0), e_pixel_curr(1)), color, 2);
                 if (b_show_feature_id)
                     cv::putText(img, std::to_string(ml_id), cv::Point(s_pixel_curr(0), s_pixel_curr(1)), font_face, font_scale, color, thickness, 8, 0);
             }
-            cv::namedWindow("2D Viewer", cv::WINDOW_NORMAL);
-            cv::imshow("2D Viewer", img);
+            cv::namedWindow("PointLine Meas."); //, cv::WINDOW_NORMAL);
+            cv::imshow("PointLine Meas.", img);
             cv::waitKey(int(50 / num_track_speed_));
             // if (cv::waitKey() == 27)
             if (b_save_meas_img)
@@ -935,9 +946,9 @@ namespace simulator
                     // std::cout << "line_id:" << para_group.second[i] << ". this line:" << line_id << std::endl;
                     if (para_group.second[i] == line_id)
                     {
-                        color_label[0] = int(simulator::color_table[(vd_id + 1) % 10][0] * 255);
-                        color_label[1] = int(simulator::color_table[(vd_id + 1) % 10][1] * 255);
-                        color_label[2] = int(simulator::color_table[(vd_id + 1) % 10][2] * 255);
+                        color_label[0] = int(simulator::color_table[(vd_id + 1) % 10][1] * 255);
+                        color_label[1] = int(simulator::color_table[(vd_id + 1) % 10][2] * 255);
+                        color_label[2] = int(simulator::color_table[(vd_id + 1) % 10][0] * 255);
                         return;
                     }
                 }

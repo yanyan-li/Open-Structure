@@ -29,6 +29,18 @@ Env.Map.env_width: 9    #
 Env.Map.env_height: 4
 Env.Map.env_length: 9
 
+Env.ReadOpenStructure.bool: 1
+Env.Public.envtraj_path: "../../dataset/1002/datasets/corridor2/raw/camera_poses.txt"
+Env.Public.envpoint_path: "../../dataset/1002/datasets/corridor2/raw/point_landmarks.txt" #results/V103/3DMap_registered.txt"
+Env.Public.envline_path: "../../dataset/1002/datasets/corridor2/raw/line_landmarks.txt"
+Env.Public.associate_path: "../../dataset/1002/datasets/corridor2/raw/association.txt"
+
+Env.Record.envpoint_path: "gt_point_landmarks.txt"
+Env.Record.envline_path: "gt_line_landmarks.txt"
+Env.Public.envtraj_num: 633
+Env.Public.envpoint_num: 2560
+Env.Public.envline_num: 102
+
 # results_path 
 Evaluation.result_path: "../evaluation/baseline_test/"
 

@@ -1,27 +1,34 @@
 # Open-Structure: a Structural Benchmark Dataset for SLAM Algorithms
 
-<div class="row">
-  <div class="col-md-4" markdown="1">
-  <!-- ![Alt Text](../img/folder/blah.jpg) -->
-  <img height="200px" class="center-block" src="images/openstructure.png">
-  </div>
- <div class="col-md-8" markdown="1">
-This new benchmark dataset, Open-Structure, is proposed for evaluating visual odometry and SLAM methods, which directly equips point and line measurements, correspondences, structural associations, and co-visibility factor graphs instead of providing raw images. Based on the proposed benchmark dataset, these 2D or 3D data can be directly input to different stages of SLAM pipelines to avoid the impact of the data preprocessing modules in ablation experiments.
+### Abstract
+
+*This paper introduces a new benchmark dataset, Open-Structure, for evaluating visual odometry and SLAM methods, which directly equips point and line measurements, correspondences, structural associations, and co-visibility factor graphs instead of providing raw images. Based on the proposed benchmark dataset, these 2D or 3D data can be directly input to different stages of SLAM pipelines to avoid the impact of the data preprocessing modules in ablation experiments. First, we propose a dataset generator for real-world and simulated scenarios. In real-world scenes, it maintains the same observations and occlusions as actual feature extraction results. Those generated simulation sequences enhance the dataset's diversity by introducing various carefully designed trajectories and observations. Second, a SLAM baseline is proposed using our dataset to evaluate widely used modules in camera pose tracking, parametrization, and optimization modules. By evaluating these state-of-the-art algorithms across different scenarios, we discern each module's strengths and weaknesses within the camera tracking and optimization process.*
+
+<p align="center">
+     <a href="coming soon"><img src="https://img.shields.io/badge/OpenStructure-Paper-yellow.svg"></a>
+  <a href="https://github.com/yanyan-li/Open-Structure/tree/feature/yanyan/dataset"><img src="https://img.shields.io/badge/OpenStructure-Dataset-green.svg"></a>
+    <a href="https://github.com/yanyan-li/Open-Structure/tree/feature/yanyan/baseline"><img src="https://img.shields.io/badge/OpenStructure-Baseline-blue.svg"></a>
+</p>
+
+#### 1. Dataset of Open-Structure
+
+| ![lrkt1](images/dataset_img/lrkt1.gif)                 | ![nostru_texture_far](images/dataset_img/nostru_texture_far.gif) | ![nostru_texture_near](images/dataset_img/nostru_texture_near.gif) |
+| ------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| ![ezgif.com-gif-maker(1)](images/dataset_img/box2.gif) | ![carwelding](images/dataset_img/carwelding.gif)             | ![ezgif.com-gif-maker(2)](images/dataset_img/office0.gif)    |
+| ![ezgif.com-gif-maker](images/dataset_img/sphere1.gif) | ![ezgif.com-gif-maker(4)](images/dataset_img/hospital.gif)   | ![ezgif.com-gif-maker(3)](images/dataset_img/nostru.gif)     |
 
 
-#### 1. Asset of Open-Structure Dataset
 
-|                          2D images                           |                        Download Link                         |
-| :----------------------------------------------------------: | :----------------------------------------------------------: |
-| <img src="images/dataset_img/lrkt2.gif" alt="living room" style="zoom:25%;" /> | living room 0 <br/> living room 1 <br/> living room 2 <br/> living room 2 |
-| <img src="images/dataset_img/ofkt0.gif" alt="office room" style="zoom:25%;" /> | office room 0 <br/> office room 1 <br/> office room 2 <br/> office room 2 |
-| <img src="images/dataset_img/japanesealley.gif" alt="tartan scenes" style="zoom:25%;" /> | carwelding <br/> cmu-office2 <br/> endofworld<br/> hospital <br/> japanesealley<br/> neighborhood |
-| <img src="images/dataset_img/structure_texture_far.gif" alt="tum rgbd" style="zoom:25%;" /> | struct_texture_far <br/> struct_texture_near <br/> nostruct_texture_near_withloop <br/> nostruct_texture_far <br/> struct_notexture_near<br/> struct_notexture_far |
-| <img src="images/dataset_img/circle.gif" alt="tum rgbd" style="zoom:25%;" /> | Circle1 <br/> Circle2 <br/> Sphere1 <br/> Sphere2 <br/> Corridor1<br/> Corridor2 |
+#### 2. Baseline of Open-Structure![baseline_arch](images/dataset_img/baseline_arch.png)
 
-#### 2. Baseline for Optimization
+#### 3. BibTeX
 
-<div style="float:left;margin:0 10px 10px 0" class="col-md-4" markdown="1">
-  <!-- ![Alt Text](../img/folder/blah.jpg) -->
-  <img width="500px" class="center-block" src="images/dataset_img/baseline.png">
-  </div>
+```
+@inproceedings{liopenstructure,
+  author = {Li, Yanyan and Guo, Zhao and Yang, Ze and Sun Yanbiao and Liang, Zhao and Tombari, Federico},
+  title = {Open-Structure: a Structural Benchmark Dataset for SLAM Algorithms},
+  year = {2023},
+  booktitle = {arXiv}
+ }
+```
+
