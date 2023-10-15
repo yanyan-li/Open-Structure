@@ -33,10 +33,10 @@ Env.Map.env_height: 8
 Env.Map.env_length: 7
 
 Env.ReadOpenStructure.bool: 1
-Env.Public.envtraj_path: "../../dataset/1002/datasets/rgbd_dataset_freiburg3_structure_notexture_far/camera_poses.txt"
-Env.Public.envpoint_path: "../../dataset/1002/datasets/rgbd_dataset_freiburg3_structure_notexture_far/point_landmarks.txt" #results/V103/3DMap_registered.txt"
-Env.Public.envline_path: "../../dataset/1002/datasets/rgbd_dataset_freiburg3_structure_notexture_far/line_landmarks.txt"
-Env.Public.associate_path: "../../dataset/1002/datasets/rgbd_dataset_freiburg3_structure_notexture_far/association.txt"
+Env.Public.envtraj_path: "../../dataset/1002/datasets/rgbd_dataset_freiburg3_nostructure_texture_near_withloop/camera_poses.txt"
+Env.Public.envpoint_path: "../../dataset/1002/datasets/rgbd_dataset_freiburg3_nostructure_texture_near_withloop/point_landmarks.txt" #results/V103/3DMap_registered.txt"
+Env.Public.envline_path: "../../dataset/1002/datasets/rgbd_dataset_freiburg3_nostructure_texture_near_withloop/line_landmarks.txt"
+Env.Public.associate_path: "../../dataset/1002/datasets/rgbd_dataset_freiburg3_nostructure_texture_near_withloop/association.txt"
 Env.Public.envtraj_num: 633
 Env.Public.envpoint_num: 2560
 Env.Public.envline_num: 102
