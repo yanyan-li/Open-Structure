@@ -1,66 +1,83 @@
-# Baseline of Open-Structure Benchmark 
+## Baseline of Open-Structure Benchmark Dataset
 
 
-## 1. License
+### 1. License
 
-JCE-SLAM Simulator is released under [GNU General Public License v3.0](LICENSE). The closed-source version of JCE-SLAM used in SLAM systems for commercial purposes, please contact yanyan.li.camp@gmail.com. If you use this work in your academic work, please cite:
+This SLAM baseline is designed to read our dataset that directly provides points and lines rather than raw images. The simulator is released under [GNU General Public License v3.0](LICENSE). The closed-source version of Venom-SLAM used in SLAM systems for commercial purposes, please contact yanyan.li.camp@gmail.com. If you use this work in your academic work, please cite:
+
+```
+@inproceedings{liopenstructure,
+  author = {Li, Yanyan and Guo, Zhao and Yang, Ze and Sun Yanbiao and Liang, Zhao and Tombari, Federico},
+  title = {Open-Structure: a Structural Benchmark Dataset for SLAM Algorithms},
+  year = {2023},
+  booktitle = {arXiv}
+ }
 ```
 
-```
 
-
-## 2. Prerequisites 
+### 2. Prerequisites 
 
 We have tested the library in **Ubuntu 18.04**, but it should be easy to compile in other platforms.
 
-#### 2.1 Your local environment
-
-#### C++11 or C++0x Compiler
-
-We use the new thread and chrono functionalities of C++11.
-
-#### Pangolin
-
-We use [Pangolin](https://github.com/stevenlovegrove/Pangolin) for visualization and user interface. Dowload and install instructions can be found at: https://github.com/stevenlovegrove/Pangolin.
-
-#### OpenCV
-
-We use [OpenCV](http://opencv.org/) to manipulate images and features. Dowload and install instructions can be found at: [http://opencv.org](http://opencv.org/). **Required at leat 3.0. Tested with OpenCV 3.2.0 and 4.4.0**.
-
-#### Eigen3
-
-Required by g2o (see below). Download and install instructions can be found at: [http://eigen.tuxfamily.org](http://eigen.tuxfamily.org/). **Required at least 3.1.0**.
-
-#### 2.2 Prepared Docker Image 
-
+#### 2.1 Fast testing based on our Docker image
 Clone the repo, and it is easy to build your own image and container based on the dockerfile proposed in the **Docker** folder. The proposed [docker environment](docker/readme.md) contains the following  libs: Pangolin, OpenCV, Eigen and minor supported libraries.   
 
-**Choices for optimization:**
-
-*Popular optimization libraries including ceres, gtsam and g2o can be selected here based on your particular preferences.* 
-Optimization libraries are not installed in advance, but suggestions for installing can be found  [here](thirdparty/readme.md).
-
-## 3. Building Baseline Simulator
-
-Clone the repository:
+#### 2.2 Your local environment
+The versions of libs used in this project are listed as follows:
 ```
-git clone https://github.com/yanyan-li/JFG-SLAM.git  
-cd JFG-SLAM/build
+OPENCV VERSION: 4.5.5
+Pangolin VERSION: 0.7
+Eigen VERSION: 3.3.4
+flags VERSION: 2.2.1
+Ceres VERSION: 1.14.0
+```
+
+
+## 3. Building baseline simulator
+
+#### 3.1 Clone and compile the repository:
+
+```
+git clone https://github.com/yanyan-li/Open-Structure.git  
+cd Open-Structure/baseline/build
 cmake ..
 make
 ```
 
-## 4. Examples
-
-#### 4.1 Simulation Dataset
+#### 3.2 User interface
 
 ```
-cd evaluation/Corridor
-evo_traj tum Point_BA.txt PointLine_BA.txt PointParaline_BA.txt PointParaline_JFG_BA.txt  --ref=ground_truth.txt  -p --plot_mode=xyz
+# under Open-Structure/baseline/build
+../bin/start_venom  ../config/venom_config_iclnuim.yaml 
+```
+
+**(1) Incremental tracking and mapping**
+
+As shown in the GIF, the baseline implements a complete pipeline based on our sequence, including data loading, tracking, sparse reconstruction, and optimization modules.
+
+![user_interface](../images/user_interface.gif)
+
+
+
+**(2) Factor graph optimization**
+
+The baseline provides *point-based* and *point-line-based* factor graphs for optimization comparisons and can be easily extended to other parameterizations and factor types.
+
+![user_optimize](../images/user_optimize.gif)
+
+## 4. Evaluation 
+
+Camera poses and landmark positions are recorded by the baseline and can be evaluated by **evo** and our proposed reconstruction error analysis tool.
 
 ```
-|  corridor scene and trajectory   |      2D measurements of every frame      |      |
-| :---:| :----: | :----: |
-| ![corridor](images/corridor.png) | <img src="images/corridor_features.gif"> |  |
+cd evaluation/icl_test
+evo_traj tum estimated_vo.txt estimated_localmap.txt Point_BA.txt  PointLine_BA.txt  --ref=ground_truth.txt  -p --plot_mode=xyz
+```
+|        trajectories         |         xyz_view          |                   rpy_view                   |
+| :-------------------------: | :-----------------------: | :------------------------------------------: |
+| ![traj](../images/traj.png) | ![rot](../images/rot.png) | <img src="../images/trans.png" alt="trans"/> |
 
-![box_trajectory](images/box_trajectory.png)
+
+
+
+
