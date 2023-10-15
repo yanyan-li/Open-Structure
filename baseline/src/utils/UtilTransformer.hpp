@@ -174,6 +174,47 @@ class UtiliLine {
     return endpoints;
   }
 
+  static Vector6d plk_to_endpoints(const Vector6d &plk_w,
+                                   const Eigen::Matrix<double, 3, 2> &mapline)
+  {
+    Eigen::Vector3d ml_s = mapline.col(0) / mapline.col(0).z();
+    Eigen::Vector3d ml_e = mapline.col(1) / mapline.col(1).z();
+    Vector2d ln = (ml_s.cross(ml_e)).head(2); // 直线的垂直方向
+    ln = ln / ln.norm();
+
+    Vector3d p12 = Vector3d(ml_s(0) + ln(0), ml_s(1) + ln(1),
+                            1.0); // 直线垂直方向上移动一个单位
+    Vector3d p22 = Vector3d(ml_e(0) + ln(0), ml_e(1) + ln(1), 1.0);
+    Vector3d cam = Vector3d(0, 0, 0);
+
+    Vector4d pi1 = pi_from_ppp(cam, ml_s, p12);
+    Vector4d pi2 = pi_from_ppp(cam, ml_e, p22);
+
+    // Eigen::Matrix3d Rwc = Twc.block(0, 0, 3, 3);
+    // Eigen::Vector3d twc = Twc.block(0, 3, 3, 1);
+
+    // Vector6d plk_c = UtiliLine::plk_from_pose(plk_w, Rwc, twc);
+
+    Vector3d nc, vc;
+    nc = plk_w.head(3);
+    vc = plk_w.tail(3);
+    Matrix4d Lc;
+    Lc << skew_symmetric(nc), vc, -vc.transpose(), 0;
+
+    Vector4d e1 = Lc * pi1;
+    Vector4d e2 = Lc * pi2;
+    e1 = e1 / e1(3);
+    e2 = e2 / e2(3);
+
+    Vector3d pts_1(e1(0), e1(1), e1(2));
+    Vector3d pts_2(e2(0), e2(1), e2(2));
+
+    Vector6d endpoints;
+    endpoints.head(3) = pts_1;
+    endpoints.tail(3) = pts_2;
+    return endpoints;
+  }
+
   static Vector6d orth_to_plk(Vector4d orth) {
     Vector6d plk;
 
@@ -382,12 +423,12 @@ class UtiliLine {
 
   static Vector2d ParaLineDirectionToS2(Vector3d& direction) {
     Vector2d s2;  // theta varphi
-    std::cout<<"direcion: "<<direction<<std::endl;
+    // std::cout<<"direcion: "<<direction<<std::endl;
     s2(0) = acos(direction.z());
     s2(1) = asin(direction.y() / sin(s2(0)));
     double varphi = acos(direction.x() / sin(s2(0)));
 
-    std::cout<<"varphi:"<<varphi <<", "<< s2(1)<<std::endl;
+    // std::cout<<"varphi:"<<varphi <<", "<< s2(1)<<std::endl;
     assert(varphi == s2(1));
     return s2;
   }
@@ -398,7 +439,7 @@ class UtiliLine {
     se2.normalize();
     
     double beta = asin(se2(1));
-    std::cout<<"beta:"<<beta<<std::endl;
+    // std::cout<<"beta:"<<beta<<std::endl;
     return beta;
   }
 
@@ -410,7 +451,7 @@ class UtiliLine {
     varphi = parali_s2(1);
 
     /// test
-    std::cout<<"theta:"<<theta<<std::endl;
+    // std::cout<<"theta:"<<theta<<std::endl;
     double alpha_z = asin(normal(2) / sin(theta));
     std::cout << "alpha_z:" << alpha_z << std::endl;
     std::cout << "extimated normal_0: " << -sin(varphi) * cos(alpha_z) - cos(theta) * cos(varphi) * sin(alpha_z) << ". expected:" << normal(0) << std::endl;
@@ -462,8 +503,8 @@ class UtiliLine {
 
   }
   /*
-   三点确定一个平面 a(x-x0)+b(y-y0)+c(z-z0)=0  --> ax + by + cz + d = 0   d =
-   -(ax0 + by0 + cz0) 平面通过点（x0,y0,z0）以及垂直于平面的法线（a,b,c）来得到
+   三点确定一个平面 a(x-x0)+b(y-y0)+c(z-z0)=0  --> ax + by + cz + d = 0
+   d = -(ax0 + by0 + cz0) 平面通过点（x0,y0,z0）以及垂直于平面的法线（a,b,c）来得到
    (a,b,c)^T = vector(AO) cross vector(BO)
    d = O.dot(cross(AO,BO))
    */
@@ -497,7 +538,7 @@ class UtiliLine {
       outliers.clear();
       inliers.push_back(mpli_ids[random_number]);
 
-      for (auto &ml_id : mpli_ids)
+      for (auto ml_id : mpli_ids)
       {
         // if (mplis[ml_id] ==Eigen::Matrix Mat32::Zero())
         //   continue;
@@ -556,8 +597,40 @@ class UtiliLine {
     }
   }
 
+  // given a mappoint, I will give back a new one lying on the line
   static Vector3d refine_endpoint(Vector3d& endpoint, Vector6d plk) {
     // TODO:
+    Vector3d normal_v = plk.head(3).normalized();
+    Vector3d direct_v = plk.tail(3).normalized();
+    Vector3d endpoint_0 = endpoint - (endpoint.transpose() * normal_v) * normal_v;
+    Vector3d direct_0 = (normal_v.cross(direct_v)).normalized();
+
+    double x0 = endpoint_0.x(); // the point lying on the plane
+    double y0 = endpoint_0.y();
+    double z0 = endpoint_0.z();
+    double c0 = direct_0.x(); //
+    double c1 = direct_0.y();
+    double c2 = direct_0.z();
+    double d0 = direct_v.x(); //
+    double d1 = direct_v.y();
+    double d2 = direct_v.z();
+
+    // /*
+    // math:
+    // direction_PT --- d*c0+d0, d*c1+d1,  d*c2+d2
+
+    // */
+    // Vector3d direction_PT;
+    // direction_PT << d * c0 + d0, d * c1 + d1, d * c2 + d2;
+    // Vector3d direct_0 = (direction_PT.cross(direct_v)).norm();
+
+    // Vector3d endpoint_new;
+    // double c0 = d1 + d1 * d1 * x0 - d1 * d1 * d1;
+    // double c1 = d2 + d2 * d2 * y0 - d2 * d2 * d2;
+    // double c2 = d3 + d3 * d3 * z0 - d3 * d3 * d3;
+    // if (d1 > 0.0001)
+    //   endpoint_new.x() = c0 / d1;
+    // return endpoint_new;
   }
 
   // 两平面相交得到直线的plucker 坐标

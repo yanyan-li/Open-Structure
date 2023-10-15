@@ -74,7 +74,9 @@ namespace simulator
         bool is_public;
         std::string traj_path;
         std::string envpoint_path_;
+        std::string record_envpoint_path_;
         std::string envline_path_;
+        std::string record_envline_path_;
         std::string associate_path_;
         std::string envline_associate_path_;
         int traj_num;
@@ -107,6 +109,9 @@ namespace simulator
             settings["Env.Public.envline_path"] >> envline_path_;
             settings["Env.Public.associate_path"] >> associate_path_;
 
+            settings["Env.Record.envpoint_path"] >> record_envpoint_path_;
+            settings["Env.Record.envline_path"] >> record_envline_path_;
+
             // set cameras
             ptr_robot_trajectory_ = new simulator::Trajectory(traject_type, frame_num, settings);
 
@@ -129,18 +134,20 @@ namespace simulator
             if (env_para_.traject_type_ == 2)
             {
                 BuildCorridorLines();
-                return;
+                // return;
             }
             else if (env_para_.traject_type_ == 0)
             {
                 BuildCircleLines();
-                return;
+                // return;
             }
             else if (env_para_.traject_type_ == 1)
             {
                 BuildSphereLines();
-                return;
+                // return;
             }
+            IO::MapLineRecord(record_envline_path_, vec_elid_pos_w_);
+            return;
         }
 
         void BuildCirclePoints()
@@ -522,7 +529,6 @@ namespace simulator
                 else
                 {
                     std::cout << "association problems" << ptr_ml->obs_frameid_linepixel_.begin()->first << "," << ptr_ml->obs_frameid_linepixel_.begin()->second << std::endl;
-
                     // ep->obs_frame_pixel_.begin()->second << std::endl;
                 }
 
@@ -614,19 +620,20 @@ namespace simulator
             if (env_para_.traject_type_ == 2)
             {
                 BuildCorridorPoints();
-                return;
+                // return;
             }
             else if (env_para_.traject_type_ == 0)
             {
                 BuildCirclePoints();
-                return;
+                // return;
             }
             else if (env_para_.traject_type_ == 1)
             {
                 // TODO:
                 BuildSpherePoints();
-                return;
+                // return;
             }
+            IO::MapPointRecord(record_envpoint_path_, vec_epid_pos_w_);
         }
 
         void BuildPublicLines()

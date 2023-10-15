@@ -76,32 +76,6 @@ bool LineOrthParameterization::Plus(const double* x,
   theta_pluse[2] = atan2(u1(1), u1(0));
 
   *phi_plus = asin(W(1, 0));
-
-  //////////////////////////////////////////////////////////
-  /*
-  // SO3参数方法，得到的雅克比更上面一样的。用上面的形式就OK。
-  Eigen::Map<const Eigen::Vector3d> theta(x);
-  double phi = *(x + 3);
-  double s1 = sin(theta[0]);
-  double c1 = cos(theta[0]);
-  double s2 = sin(theta[1]);
-  double c2 = cos(theta[1]);
-  double s3 = sin(theta[2]);
-  double c3 = cos(theta[2]);
-  Matrix3d R;
-  R <<
-    c2 * c3,   s1 * s2 * c3 - c1 * s3,   c1 * s2 * c3 + s1 * s3,
-          c2 * s3,   s1 * s2 * s3 + c1 * c3,   c1 * s2 * s3 - s1 * c3,
-          -s2,                  s1 * c2,                  c1 * c2;
-
-  Sophus::SO3<double> U = Sophus::SO3<double>::exp(theta);
-  Sophus::SO3<double> U1(R);
-
-  std::cout << U.matrix() << "\n\n" <<U1.matrix()<<"\n\n"<<R<<"\n\n";
-
-  std::cout << theta <<"\n\n" << U1.log() << "\n\n"<<
-  Sophus::SO3<double>::exp(U1.log()).matrix() << "\n\n";
-   */
   return true;
 }
 bool LineOrthParameterization::ComputeJacobian(const double* x,
