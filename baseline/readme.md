@@ -55,7 +55,7 @@ make
 
 As shown in the GIF, the baseline implements a complete pipeline based on our sequence, including data loading, tracking, sparse reconstruction, and optimization modules.
 
-![user_interface](../images/user_interface.gif)
+<img src="../images/user_interface.gif" alt="user_interface" style="zoom:50%;" />
 
 
 
@@ -63,7 +63,7 @@ As shown in the GIF, the baseline implements a complete pipeline based on our se
 
 The baseline provides *point-based* and *point-line-based* factor graphs for optimization comparisons and can be easily extended to other parameterizations and factor types.
 
-![user_optimize](../images/user_optimize.gif)
+<img src="../images/user_optimize.gif" alt="user_optimize" style="zoom:50%;" />
 
 ## 4. Evaluation 
 
