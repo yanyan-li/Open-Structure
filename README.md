@@ -6,9 +6,10 @@
 
 <p align="center">
      <a href="coming soon"><img src="https://img.shields.io/badge/OpenStructure-Paper-yellow.svg"></a>
-  <a href="https://github.com/yanyan-li/Open-Structure/tree/feature/yanyan/dataset"><img src="https://img.shields.io/badge/OpenStructure-Dataset-green.svg"></a>
-    <a href="https://github.com/yanyan-li/Open-Structure/tree/feature/yanyan/baseline"><img src="https://img.shields.io/badge/OpenStructure-Baseline-blue.svg"></a>
+  <a href="https://github.com/yanyan-li/Open-Structure/tree/main/dataset"><img src="https://img.shields.io/badge/OpenStructure-Dataset-green.svg"></a>
+    <a href="https://github.com/yanyan-li/Open-Structure/tree/main/baseline"><img src="https://img.shields.io/badge/OpenStructure-Baseline-blue.svg"></a>
 </p>
+
 
 #### 1. Dataset of Open-Structure
 
