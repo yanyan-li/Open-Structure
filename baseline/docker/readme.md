@@ -32,4 +32,3 @@ When you use your VS Code IDE to connect the container, you will see the left im
 ```
 
 <img src="../../images/docker.png" alt="docker" style="zoom:33%;" />
-

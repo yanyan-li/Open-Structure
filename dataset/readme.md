@@ -1,17 +1,48 @@
 ## Introduction of Open Structrue Dataset
 
+### 1. List of sequences
+
+| *office0:* [img]()  [observation]()  [initial factor graph]() | *livingroom0:*  [img]()  [observation]()  [initial factor graph]() |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+| ![of0](../images/dataset_img/of0.png)                        | ![lrkt0](../images/dataset_img/lrkt0.png)                    |
+| *office1:*  [img]()  [observation]()  [initial factor graph]() | *livingroom1:*  [img]()  [observation]()  [initial factor graph]() |
+| ![of1](../images/dataset_img/of1.png)                        | ![lrkt1](../images/dataset_img/lrkt1.png)                    |
+| *office2:*  [img]()  [observation]()  [initial factor graph]() | *livingroom2:*  [img]()  [observation]()  [initial factor graph]() |
+| ![of2](../images/dataset_img/of2.png)                        | ![lrkt2](../images/dataset_img/lrkt2.png)                    |
+| *office3:*  [img]()  [observation]()  [initial factor graph]() | *livingroom3:*  [img]()  [observation]()  [initial factor graph]() |
+| ![of3](../images/dataset_img/of3.png)                        | ![lrkt3](../images/dataset_img/lrkt3.png)                    |
 
 
-We have two types of data structures. 
 
-### 1. camera poses and map landmarks
+| *nostr_textrue_*far:  [img]()  [observation]()  [initial factor graph]() | *box1:*  [img]()  [observation]()  [initial factor graph]()  |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+| ![nostructure_texture_far](../images/dataset_img/nostructure_texture_far.png) | ![box1](../images/dataset_img/box1.png)                      |
+| *nostr_texture_near_loop:*  [img]()  [observation]()  [initial factor graph]() | *box2*:  [img]()  [observation]()  [initial factor graph]()  |
+| ![nostructure_texture_near_withloop](../images/dataset_img/nostructure_texture_near_withloop.png) | ![box2](../images/dataset_img/box2.png)                      |
+| *str_notexture_far*:  [img]()  [observation]()  [initial factor graph]() | *corridor1*:  [img]()  [observation]()  [initial factor graph]() |
+| ![structure_notexture_far](../images/dataset_img/structure_notexture_far.png) | ![corridor1](../images/dataset_img/corridor1.png)            |
+| *str_notexture_near*:  [img]()  [observation]()  [initial factor graph]() | *corridor2*:  [img]()  [observation]()  [initial factor graph]() |
+| ![structure_notexture_near](../images/dataset_img/structure_notexture_near.png) | ![corridor2](../images/dataset_img/corridor2.png)            |
+| *str_texture_near*:  [img]()  [observation]()  [initial factor graph]() | *sphere1*:  [img]()  [observation]()  [initial factor graph]() |
+| ![structure_texture_far](../images/dataset_img/structure_texture_far.png) | ![sphere1](../images/dataset_img/sphere1.png)                |
+| *str_texture_far*:  [img]()  [observation]()  [initial factor graph]() | *sphere2*:  [img]()  [observation]()  [initial factor graph]() |
+| ![structure_texture_near](../images/dataset_img/structure_texture_near.png) | ![sphere2](../images/dataset_img/sphere2.png)                |
 
-example: 
 
-```
-cd baseline/dataset/public/v1
-# you will see paraline.txt point.txt v101_pose_gt.txt
-```
+
+| *hospital*: [img]()  [observation]()  [initial factor graph]() | *japanesealley*: [img]()  [observation]()  [initial factor graph]() |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+| ![hospital](../images/dataset_img/hospital.png)              | ![japanesealley](../images/dataset_img/japanesealley.png)    |
+| *carwelding*: [img]()  [observation]()  [initial factor graph]() | *office*: [img]()  [observation]()  [initial factor graph]() |
+| ![carwelding](../images/dataset_img/carwelding.png)          | ![office](../images/dataset_img/office.png)                  |
+
+
+
+
+
+### 2. Data file introduction
+
+**2.1** Camera pose
 
 ```
 #time_stamp tx ty tz w qx qy qz
@@ -25,43 +56,35 @@ cd baseline/dataset/public/v1
 ...
 ```
 
+**2.2**  point and line landmarks
+
 ```
-#x y z
--2.91190004 -3.40980005 0.45410001
--2.93079996 -3.42319989 0.77450001
--2.85829997 -3.43190002 1.08029997
--3.30690002 -3.43400002 1.33879995
--3.63730001 -3.41860008 1.96889997
--3.30819988 -3.43540001 1.64699996
--3.30629992 -3.43519998 1.95360005
--2.98830009 -3.43470001 1.37
+#mp_id x y z
+0 -2.91190004 -3.40980005 0.45410001
+1 -2.93079996 -3.42319989 0.77450001
+2 -2.85829997 -3.43190002 1.08029997
+3 -3.30690002 -3.43400002 1.33879995
+4 -3.63730001 -3.41860008 1.96889997
+5 -3.30819988 -3.43540001 1.64699996
+6 -3.30629992 -3.43519998 1.95360005
+7 -2.98830009 -3.43470001 1.37
 ```
 
 ```
-# paraline_id startpoint_x startpoint_y startpoint_z endpoint_x endpoint_y endpoint_z  
+# ml_id startpoint_x startpoint_y startpoint_z endpoint_x endpoint_y endpoint_z  
 0 -4.308  4.835  3.48  -4.376 -3.322  3.549
-0 -4.32934315  1.37896258  2.04922319 -4.34565685 -0.57796258  2.06577681
-0 -4.32835951  1.36699969  1.0787398  -4.34464049 -0.58599969  1.0952602 
-0 -4.36316546 -1.4910902   2.47208701 -4.37383454 -2.7709098   2.48291299
-0 -4.33162747 -1.52501158  2.34405582 -4.34137253 -2.69398842  2.35394418
-0 -4.31428179 -1.62100063  2.25571976 -4.32271821 -2.63299937  2.26428024
-0 -3.249979   -2.9750467   1.92745663 -3.253021   -3.3399533   1.93054337
-0 -4.31731495 -1.60897868  0.09025341 -4.32568505 -2.61302132  0.09874659
-0 -4.34840234  2.85497247  0.21432002 -4.35959766  1.51202753  0.22567998
-0 -4.00508641  3.34004676  0.94655827 -4.00891359  2.88095324  0.95044173
-0 -3.4046194   3.33008918  0.94309174 -3.4083806   2.87891082  0.94690826
-0 -3.51976147  3.97802446  0.34122855 -3.52423853  3.44097554  0.34577145
-0 -3.6226325   3.25503932  0.21511239 -3.6253675   2.92696068  0.21788761
+1 -4.32934315  1.37896258  2.04922319 -4.34565685 -0.57796258  2.06577681
+2 -4.32835951  1.36699969  1.0787398  -4.34464049 -0.58599969  1.0952602 
+3 -4.36316546 -1.4910902   2.47208701 -4.37383454 -2.7709098   2.48291299
+4 -4.33162747 -1.52501158  2.34405582 -4.34137253 -2.69398842  2.35394418
+5 -4.31428179 -1.62100063  2.25571976 -4.32271821 -2.63299937  2.26428024
+6 -3.249979   -2.9750467   1.92745663 -3.253021   -3.3399533   1.93054337
+7 -4.31731495 -1.60897868  0.09025341 -4.32568505 -2.61302132  0.09874659
 ```
 
-### 3. 2D measurements, association, structural_relationship 
+**2.3** initial factor graph 
 
-example:
-
-```
-cd baseline/evaluation/paper_box
-# you will see venom_sequence.txt
-```
+2D measurements, association and structural_relationship are saved in the *venom_sequence.txt*. 
 
 ```
 # camera pose camera_id tx ty tz w qx qy qz
@@ -128,14 +151,3 @@ MaplineFrameAsso: 1 4 119.341 63.8916 6.31764 352.233 79.3842 5.72008
 ParalineMaplineAsso: 0 10 3 4 9 10 15 16 21 22 27 28 
 ```
 
-
-
-|                          2D images                           |                        Download Link                         |
-| :----------------------------------------------------------: | :----------------------------------------------------------: |
-| <img src="images/dataset_img/lrkt2.gif" alt="living room" style="zoom:25%;" /> | living room 0 <br/> living room 1 <br/> living room 2 <br/> living room 2 |
-| <img src="images/dataset_img/ofkt0.gif" alt="office room" style="zoom:25%;" /> | office room 0 <br/> office room 1 <br/> office room 2 <br/> office room 2 |
-| <img src="images/dataset_img/japanesealley.gif" alt="tartan scenes" style="zoom:25%;" /> | carwelding <br/> cmu-office2 <br/> endofworld<br/> hospital <br/> japanesealley<br/> neighborhood |
-| <img src="images/dataset_img/structure_texture_far.gif" alt="tum rgbd" style="zoom:25%;" /> | struct_texture_far <br/> struct_texture_near <br/> nostruct_texture_near_withloop <br/> nostruct_texture_far <br/> struct_notexture_near<br/> struct_notexture_far |
-| <img src="images/dataset_img/circle.gif" alt="tum rgbd" style="zoom:25%;" /> | Circle1 <br/> Circle2 <br/> Sphere1 <br/> Sphere2 <br/> Corridor1<br/> Corridor2 |
-
-#### 2. Baseline of Open-Structure
