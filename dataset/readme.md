@@ -2,30 +2,30 @@
 
 ### 1. List of sequences
 
-| *office0:* [img]()  [observation]()  [initial factor graph]() | *livingroom0:*  [img]()  [observation]()  [initial factor graph]() |
+| *office0:* [img](https://github.com/yanyan-li/Open-Structure/blob/main/dataset/office0/img.zip) \|  [observation](https://github.com/yanyan-li/Open-Structure/blob/main/dataset/office0/observation.zip) \| [initial factor graph](https://github.com/yanyan-li/Open-Structure/blob/main/dataset/office0/baseline.zip) | *livingroom0:*  [img]() \| [observation]() \| [initial factor graph]() |
 | ------------------------------------------------------------ | ------------------------------------------------------------ |
 | ![of0](../images/dataset_img/of0.png)                        | ![lrkt0](../images/dataset_img/lrkt0.png)                    |
-| *office1:*  [img]()  [observation]()  [initial factor graph]() | *livingroom1:*  [img]()  [observation]()  [initial factor graph]() |
+| *office1:*  [img](https://github.com/yanyan-li/Open-Structure/blob/main/dataset/office1/img.zip) \|[observation](https://github.com/yanyan-li/Open-Structure/blob/main/dataset/office1/observation.zip) \| [initial factor graph](https://github.com/yanyan-li/Open-Structure/blob/main/dataset/office1/baseline.zip) | *livingroom1:*  [img]() \| [observation]() \| [initial factor graph]() |
 | ![of1](../images/dataset_img/of1.png)                        | ![lrkt1](../images/dataset_img/lrkt1.png)                    |
-| *office2:*  [img]()  [observation]()  [initial factor graph]() | *livingroom2:*  [img]()  [observation]()  [initial factor graph]() |
+| *office2:*  [img](https://github.com/yanyan-li/Open-Structure/blob/main/dataset/office2/img.zip) \| [observation](https://github.com/yanyan-li/Open-Structure/blob/main/dataset/office2/observation.zip) \| [initial factor graph](https://github.com/yanyan-li/Open-Structure/blob/main/dataset/office2/baseline.zip) | *livingroom2:*  [img]() \| [observation]() \| [initial factor graph]() |
 | ![of2](../images/dataset_img/of2.png)                        | ![lrkt2](../images/dataset_img/lrkt2.png)                    |
-| *office3:*  [img]()  [observation]()  [initial factor graph]() | *livingroom3:*  [img]()  [observation]()  [initial factor graph]() |
+| *office3:*  [img](https://github.com/yanyan-li/Open-Structure/blob/main/dataset/office3/img.zip) \| [observation](https://github.com/yanyan-li/Open-Structure/blob/main/dataset/office3/observation.zip) \| [initial factor graph](https://github.com/yanyan-li/Open-Structure/blob/main/dataset/office3/baseline.zip) | *livingroom3:*  [img]() \| [observation]() \| [initial factor graph]() |
 | ![of3](../images/dataset_img/of3.png)                        | ![lrkt3](../images/dataset_img/lrkt3.png)                    |
 
 
 
-| *nostr_textrue_*far:  [img]()  [observation]()  [initial factor graph]() | *box1:*  [img]()  [observation]()  [initial factor graph]()  |
+| *nostr_textrue_*far:  [img]() \| [observation]() \| [initial factor graph]() | *box1:*  [img]() \| [observation]() \| [initial factor graph]() |
 | ------------------------------------------------------------ | ------------------------------------------------------------ |
 | ![nostructure_texture_far](../images/dataset_img/nostructure_texture_far.png) | ![box1](../images/dataset_img/box1.png)                      |
-| *nostr_texture_near_loop:*  [img]()  [observation]()  [initial factor graph]() | *box2*:  [img]()  [observation]()  [initial factor graph]()  |
+| *nostr_texture_near_loop:*  [img]() \| [observation]() \| [initial factor graph]() | *box2*:  [img]() \| [observation]() \| [initial factor graph]() |
 | ![nostructure_texture_near_withloop](../images/dataset_img/nostructure_texture_near_withloop.png) | ![box2](../images/dataset_img/box2.png)                      |
-| *str_notexture_far*:  [img]()  [observation]()  [initial factor graph]() | *corridor1*:  [img]()  [observation]()  [initial factor graph]() |
+| *str_notexture_far*:  [img]() \| [observation]() \| [initial factor graph]() | *corridor1*:  [img]() \| [observation]() \| [initial factor graph]() |
 | ![structure_notexture_far](../images/dataset_img/structure_notexture_far.png) | ![corridor1](../images/dataset_img/corridor1.png)            |
-| *str_notexture_near*:  [img]()  [observation]()  [initial factor graph]() | *corridor2*:  [img]()  [observation]()  [initial factor graph]() |
+| *str_notexture_near*:  [img]() \| [observation]() \|[initial factor graph]() | *corridor2*:  [img]() \| [observation]() \| [initial factor graph]() |
 | ![structure_notexture_near](../images/dataset_img/structure_notexture_near.png) | ![corridor2](../images/dataset_img/corridor2.png)            |
-| *str_texture_near*:  [img]()  [observation]()  [initial factor graph]() | *sphere1*:  [img]()  [observation]()  [initial factor graph]() |
+| *str_texture_near*:  [img]() \| [observation]() \| [initial factor graph]() | *sphere1*:  [img]() \| [observation]() \| [initial factor graph]() |
 | ![structure_texture_far](../images/dataset_img/structure_texture_far.png) | ![sphere1](../images/dataset_img/sphere1.png)                |
-| *str_texture_far*:  [img]()  [observation]()  [initial factor graph]() | *sphere2*:  [img]()  [observation]()  [initial factor graph]() |
+| *str_texture_far*:  [img]() \| [observation]() \| [initial factor graph]() | *sphere2*:  [img]() \| [observation]() \| [initial factor graph]() |
 | ![structure_texture_near](../images/dataset_img/structure_texture_near.png) | ![sphere2](../images/dataset_img/sphere2.png)                |
 
 
