@@ -14,7 +14,7 @@
 
 
 
-| *nostr_textrue_*far:  [img]() \| [observation]() \| [initial factor graph]() | *box1:*  [img]() \| [observation]() \| [initial factor graph]() |
+| *nostr_textrue_far*:  [img]() \| [observation]() \| [initial factor graph]() | *box1:*  [img]() \| [observation]() \| [initial factor graph]() |
 | ------------------------------------------------------------ | ------------------------------------------------------------ |
 | ![nostructure_texture_far](../images/dataset_img/nostructure_texture_far.png) | ![box1](../images/dataset_img/box1.png)                      |
 | *nostr_texture_near_loop:*  [img]() \| [observation]() \| [initial factor graph]() | *box2*:  [img]() \| [observation]() \| [initial factor graph]() |
