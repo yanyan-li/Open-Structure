@@ -1,4 +1,4 @@
-# Open-Structure: a Structural Benchmark Dataset for SLAM Algorithms
+# Open-Structure: a Structural Benchmark Dataset for SLAM Algorithms  （RA-L 2024）
 
 ### Abstract
 
